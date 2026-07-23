@@ -62,6 +62,7 @@ scrapdash-app/
 - [X] Policies base (`AccountPolicy`, `EmployeePolicy` — regras simples de ownership, sem matriz de permissões final; isso fica para o Sprint 9).
 - [X] Telas de login/registro no Next.js (pt-BR), integração com API (`/login`, `/register`, `/dashboard`) — validado end-to-end no navegador (Playwright): registro → dashboard → logout → login → persistência de sessão após reload.
 - [X] Context/hook de autenticação no frontend (`AuthContext`, `useAuth`) — token persistido em `localStorage`, hidratação via `/auth/me` no carregamento.
+- [X] **Extra (fora do escopo original do sprint):** login com Google (botão oficial do Google Identity Services). Backend verifica o ID token (`GoogleAuthService` + `firebase/php-jwt`, sem precisar de client secret) e faz find-or-create do usuário por `google_id`/e-mail; frontend renderiza o botão via `GoogleSignInButton` em `/login` e `/register`. `GOOGLE_CLIENT_ID`/`NEXT_PUBLIC_GOOGLE_CLIENT_ID` configurados com Client ID real — validado no navegador: botão renderiza, popup abre e chega em "Sign in to continue to Scrap Dash" no domínio real do Google. Só falta o login com uma conta Google de verdade (não automatizável, precisa ser feito manualmente por um usuário).
 
 **Entregável:** login funcional ponta a ponta, com JWT emitido pelo Laravel e consumido pelo Next.js. ✅ Validado.
 

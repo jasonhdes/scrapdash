@@ -6,15 +6,26 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { ApiError } from "@/services/api";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import styles from "@/styles/auth.module.css";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleGoogleCredential(credential: string) {
+    setError(null);
+    try {
+      await loginWithGoogle(credential);
+      router.push("/dashboard");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Não foi possível entrar com o Google.");
+    }
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -70,6 +81,8 @@ export default function LoginPage() {
             {isSubmitting ? "Entrando..." : "Entrar"}
           </button>
         </form>
+
+        <GoogleSignInButton onCredential={handleGoogleCredential} text="signin_with" />
 
         <p className={styles.footer}>
           Não tem uma conta? <Link href="/register">Cadastre-se</Link>

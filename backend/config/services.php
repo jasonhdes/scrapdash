@@ -35,6 +35,10 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+    ],
+
     'mercadolivre' => [
         'client_id' => env('MERCADOLIVRE_CLIENT_ID'),
         'client_secret' => env('MERCADOLIVRE_CLIENT_SECRET'),
