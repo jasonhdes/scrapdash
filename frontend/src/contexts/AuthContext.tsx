@@ -1,0 +1,74 @@
+"use client";
+
+import { createContext, useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import * as authService from "@/services/auth";
+import type { LoginPayload, RegisterPayload, User } from "@/types/auth";
+
+const TOKEN_STORAGE_KEY = "scrapdash_token";
+
+interface AuthContextValue {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  login: (payload: LoginPayload) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<void>;
+  logout: () => Promise<void>;
+}
+
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const storedToken = window.localStorage.getItem(TOKEN_STORAGE_KEY);
+
+    if (!storedToken) {
+      setIsLoading(false);
+      return;
+    }
+
+    authService
+      .me(storedToken)
+      .then(({ user: loadedUser }) => {
+        setToken(storedToken);
+        setUser(loadedUser);
+      })
+      .catch(() => {
+        window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const login = useCallback(async (payload: LoginPayload) => {
+    const response = await authService.login(payload);
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, response.access_token);
+    setToken(response.access_token);
+    setUser(response.user);
+  }, []);
+
+  const register = useCallback(async (payload: RegisterPayload) => {
+    const response = await authService.register(payload);
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, response.access_token);
+    setToken(response.access_token);
+    setUser(response.user);
+  }, []);
+
+  const logout = useCallback(async () => {
+    if (token) {
+      await authService.logout(token).catch(() => undefined);
+    }
+    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+    setToken(null);
+    setUser(null);
+  }, [token]);
+
+  return (
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}

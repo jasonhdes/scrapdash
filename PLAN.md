@@ -15,7 +15,7 @@ Pontos que **sempre** exigem sua decisão antes de eu prosseguir: credenciais re
 2. [X] Node.js v24.18.0 / npm 11.16.0 instalados.
 3. [X] Composer 2.10.1 disponível (`C:\xampp\php\composer.phar`).
 4. [ ] Conta no Mercado Livre DevCenter — a confirmar antes do Sprint 3.
-5. [X] Domínio local definido: **`scrapdash.local`** (não usamos `nooemflow.local`).
+5. [X] Domínio local definido: **`scrapdash.local`** (não usamos `scrapdash.local`).
 
 ## Estrutura de Diretórios Alvo
 
@@ -41,9 +41,9 @@ scrapdash-app/
 - [X] Criar projeto Next.js em `frontend/` (`create-next-app`, TypeScript).
 - [X] Configurar `.env` do backend (DB → MySQL `scrapdash`, APP_URL → `http://scrapdash.local`, APP_NAME → "Scrap Dash"). JWT secret fica para o Sprint 2, junto do pacote de auth.
 - [X] Criar VirtualHost `httpd-vhosts.conf` apontando para `backend/public` — **bloco pronto em `scripts/vhost-scrapdash.conf`, aplicação pendente de você** (edita arquivo de sistema, ver `scripts/INSTRUCOES_VHOST.md`).
-- [ ] Atualizar `hosts` do Windows (requer permissão administrativa — **ação sua ou aprovação explícita**, pois edita arquivo de sistema). Instruções em `scripts/INSTRUCOES_VHOST.md`.
+- [X] Atualizar `hosts` do Windows (aplicado por você via Notepad como administrador; linha `127.0.0.1 scrapdash.local` confirmada em `C:\Windows\System32\drivers\etc\hosts`).
 - [X] Criar banco de dados MySQL via phpMyAdmin/CLI (`scrapdash`, utf8mb4).
-- [ ] Validar `http://<dominio>.local` respondendo à página padrão do Laravel — validado via `php artisan serve` (HTTP 200, título "Scrap Dash"); falta validar no domínio `scrapdash.local` após VirtualHost/hosts serem aplicados.
+- [X] Validar `http://<dominio>.local` respondendo à página padrão do Laravel — `http://scrapdash.local` retornando HTTP 200 com título "Scrap Dash" (DNS resolvendo para 127.0.0.1, VirtualHost servindo `backend/public`).
 - [X] Estrutura de pastas do backend em DDD (`Domain`, `Application/{Services,DTO,Actions}`, `Infrastructure/{MercadoLivre,Repositories,Cache,Queue}`, `Http`, `Policies`, `Jobs`, `Events`, `Listeners`, `Notifications`).
 - [X] Estrutura de pastas do frontend (`components`, `layouts`, `hooks`, `services`, `contexts`, `store`, `utils`, `types`, `styles` em `frontend/src/`). Obs.: pasta `pages/` não foi criada — o projeto usa o App Router do Next.js (`src/app/`), que substitui o roteamento por `pages/`.
 - [X] Configurar lint/format (ESLint + Prettier no front; Pint já incluso por padrão no Laravel 12 no back — PHPStan pode ser adicionado depois se necessário).
@@ -55,15 +55,15 @@ scrapdash-app/
 
 ## Sprint 2 — Usuários e Autenticação
 
-- [ ] Migrations: `users`, `accounts`, `employees` (com relacionamento User → Accounts, User → Employees).
-- [ ] Autenticação JWT (ex.: `tymon/jwt-auth` ou Sanctum, a decidir).
-- [ ] Endpoints: registro, login, refresh, logout.
-- [ ] Middleware de autenticação na API.
-- [ ] Policies base (estrutura, sem regras finais ainda).
-- [ ] Telas de login/registro no Next.js (pt-BR), integração com API.
-- [ ] Context/hook de autenticação no frontend (`AuthContext`, `useAuth`).
+- [X] Migrations: `users` (+ coluna `role`), `accounts`, `employees` (`Account belongsTo User`, `Employee belongsTo Account`) — aplicadas via `php artisan migrate`, confirmadas no MySQL.
+- [X] Autenticação JWT — `tymon/jwt-auth` instalado, guard `api` configurado em `config/auth.php`, `JWT_SECRET` gerado.
+- [X] Endpoints: registro, login, refresh, logout (`routes/api.php`, `AuthController`) — testados via curl (fluxo completo: registro → login → me → refresh com rotação de token → logout com blacklist).
+- [X] Middleware de autenticação na API (`auth:api` protegendo `me`/`refresh`/`logout`) — confirmado retornando 401 sem token e após logout.
+- [X] Policies base (`AccountPolicy`, `EmployeePolicy` — regras simples de ownership, sem matriz de permissões final; isso fica para o Sprint 9).
+- [X] Telas de login/registro no Next.js (pt-BR), integração com API (`/login`, `/register`, `/dashboard`) — validado end-to-end no navegador (Playwright): registro → dashboard → logout → login → persistência de sessão após reload.
+- [X] Context/hook de autenticação no frontend (`AuthContext`, `useAuth`) — token persistido em `localStorage`, hidratação via `/auth/me` no carregamento.
 
-**Entregável:** login funcional ponta a ponta, com JWT emitido pelo Laravel e consumido pelo Next.js.
+**Entregável:** login funcional ponta a ponta, com JWT emitido pelo Laravel e consumido pelo Next.js. ✅ Validado.
 
 ---
 
