@@ -8,6 +8,13 @@ export function login(payload: LoginPayload) {
   });
 }
 
+export function loginWithGoogle(credential: string) {
+  return apiFetch<AuthResponse>("/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ credential }),
+  });
+}
+
 export function register(payload: RegisterPayload) {
   return apiFetch<AuthResponse>("/auth/register", {
     method: "POST",

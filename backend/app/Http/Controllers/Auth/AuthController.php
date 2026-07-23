@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\Auth\Concerns\IssuesJwtTokens;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
+    use IssuesJwtTokens;
+
     public function register(RegisterRequest $request): JsonResponse
     {
         $user = User::create([
@@ -30,7 +33,7 @@ class AuthController extends Controller
 
         $token = Auth::guard('api')->login($user);
 
-        return $this->tokenResponse($token, $user)->setStatusCode(201);
+        return $this->tokenResponse($token, $user, 201);
     }
 
     public function login(LoginRequest $request): JsonResponse
@@ -63,15 +66,5 @@ class AuthController extends Controller
         Auth::guard('api')->logout();
 
         return response()->json(['message' => 'Logout realizado com sucesso.']);
-    }
-
-    private function tokenResponse(string $token, User $user): JsonResponse
-    {
-        return response()->json([
-            'user' => new UserResource($user),
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
-        ]);
     }
 }
