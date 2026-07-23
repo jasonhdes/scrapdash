@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'mercadolivre' => [
+        'client_id' => env('MERCADOLIVRE_CLIENT_ID'),
+        'client_secret' => env('MERCADOLIVRE_CLIENT_SECRET'),
+        'redirect_uri' => env('MERCADOLIVRE_REDIRECT_URI', 'https://scrapdash.local/auth/mercadolivre/callback'),
+        'auth_url' => env('MERCADOLIVRE_AUTH_URL', 'https://auth.mercadolivre.com.br/authorization'),
+        'api_url' => env('MERCADOLIVRE_API_URL', 'https://api.mercadolibre.com'),
+        // Para onde o navegador volta no frontend depois do callback.
+        'frontend_redirect_url' => env('MERCADOLIVRE_FRONTEND_REDIRECT_URL', 'http://localhost:3000/dashboard'),
+    ],
+
 ];

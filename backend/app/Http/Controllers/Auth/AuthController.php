@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Models\Account;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,12 @@ class AuthController extends Controller
             'email' => $request->validated('email'),
             'password' => $request->validated('password'),
             'role' => 'user',
+        ]);
+
+        Account::create([
+            'user_id' => $user->id,
+            'name' => 'Conta Principal',
+            'marketplace' => 'mercado_livre',
         ]);
 
         $token = Auth::guard('api')->login($user);

@@ -69,18 +69,15 @@ scrapdash-app/
 
 ## Sprint 3 — Integração com Mercado Livre (OAuth)
 
-- [ ] **Ação sua:** criar aplicação no DevCenter do Mercado Livre e me fornecer Client ID/Secret via `.env` (nunca commitar). Configuração conforme RESUMO.md:
-  - Tipo de aplicação: **Web**, nome sugerido "NoOEM Flow".
-  - Ativar **PKCE**, desativar **Device Grant**.
-  - Redirect URI de dev: `http://nooemflow.local/auth/mercadolivre/callback` (ajustar se o domínio local definitivo for outro — ver Pré-requisito 5; produção exige HTTPS).
-- [ ] Configurar `MERCADOLIVRE_CLIENT_ID`, `MERCADOLIVRE_CLIENT_SECRET`, `MERCADOLIVRE_REDIRECT_URI` no `.env`.
-- [ ] Implementar `MercadoLivreService`: fluxo OAuth2 + PKCE, troca de code por token.
-- [ ] Rota de callback `/auth/mercadolivre/callback`.
-- [ ] Persistir tokens (access/refresh) vinculados à `Account`.
-- [ ] Tela no frontend para "Conectar conta Mercado Livre".
-- [ ] Testar fluxo completo em ambiente de desenvolvimento (`http://<dominio>.local/...`).
+- [X] **Ação sua:** criar aplicação no DevCenter do Mercado Livre e fornecer Client ID/Secret via `.env` (nunca commitado — confirmado fora do Git). Redirect URI cadastrada como **HTTPS**: `https://scrapdash.local/auth/mercadolivre/callback` (diferente do rascunho original em HTTP — por isso criamos um VirtualHost `:443` no Apache com o certificado autoassinado do XAMPP só para servir esse callback).
+- [X] Configurar `MERCADOLIVRE_CLIENT_ID`, `MERCADOLIVRE_CLIENT_SECRET`, `MERCADOLIVRE_REDIRECT_URI` no `.env`.
+- [X] Implementar `MercadoLivreService`: fluxo OAuth2 + PKCE (`generatePkcePair`, `buildAuthorizationUrl`, `exchangeCodeForToken`, `refreshAccessToken`) — troca de token testada contra o endpoint real do Mercado Livre (rejeitou code falso corretamente, confirmando client_id/secret válidos).
+- [X] Rota de callback `/auth/mercadolivre/callback` (`routes/web.php`) — testada com state inválido e code falso, ambos tratados com redirect de erro para o frontend.
+- [X] Persistir tokens (access/refresh) vinculados à `Account` — implementado em `MercadoLivreAuthController::callback` (campos criptografados via cast `encrypted`); caminho de sucesso só será exercitado quando um usuário real completar o consentimento (ver item abaixo).
+- [X] Tela no frontend para "Conectar conta Mercado Livre" (`/dashboard`) — testada via Playwright: gera a URL de autorização e navega até a tela de login real do Mercado Livre com os parâmetros corretos.
+- [ ] Testar fluxo completo em ambiente de desenvolvimento — **bloqueado para automação**: o Mercado Livre bloqueia navegador headless/automatizado na tela de login (proteção antibot deles), então essa etapa final (login real + consentimento) só pode ser feita manualmente por você no navegador. Peço que teste clicando em "Conectar conta Mercado Livre" no dashboard e confirme se volta com "Conta do Mercado Livre conectada com sucesso."
 
-**Entregável:** usuário consegue conectar uma conta do Mercado Livre via OAuth e o token fica salvo.
+**Entregável:** usuário consegue conectar uma conta do Mercado Livre via OAuth e o token fica salvo. Backend e frontend prontos e validados até o limite do que é automatizável; falta sua validação manual do handshake real.
 
 ---
 

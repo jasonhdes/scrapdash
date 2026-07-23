@@ -31,3 +31,9 @@ No painel de controle do XAMPP, clique em "Stop" e depois "Start" no Apache (ou 
 ## 4. Testar
 
 Acesse `http://scrapdash.local` no navegador — deve exibir a página padrão do Laravel.
+
+## 5. HTTPS (necessário para o OAuth do Mercado Livre)
+
+O `vhost-scrapdash.conf` também inclui um VirtualHost `:443` usando o certificado autoassinado que já vem com o XAMPP (`conf/ssl.crt/server.crt`). Isso é necessário porque a redirect URI cadastrada no DevCenter do Mercado Livre é HTTPS.
+
+Ao acessar `https://scrapdash.local` pela primeira vez, o navegador vai avisar que o certificado não é confiável (é autoassinado, só para dev) — clique em "Avançado" → "Continuar mesmo assim". Isso só precisa ser feito uma vez por navegador.
