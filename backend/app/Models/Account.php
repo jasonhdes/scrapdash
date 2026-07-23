@@ -15,7 +15,25 @@ class Account extends Model
         'user_id',
         'name',
         'marketplace',
+        'mercadolivre_user_id',
+        'mercadolivre_access_token',
+        'mercadolivre_refresh_token',
+        'mercadolivre_token_expires_at',
     ];
+
+    protected $hidden = [
+        'mercadolivre_access_token',
+        'mercadolivre_refresh_token',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'mercadolivre_access_token' => 'encrypted',
+            'mercadolivre_refresh_token' => 'encrypted',
+            'mercadolivre_token_expires_at' => 'datetime',
+        ];
+    }
 
     /**
      * @return BelongsTo<User, $this>
@@ -31,5 +49,10 @@ class Account extends Model
     public function employees(): HasMany
     {
         return $this->hasMany(Employee::class);
+    }
+
+    public function isConnectedToMercadoLivre(): bool
+    {
+        return ! is_null($this->mercadolivre_access_token);
     }
 }
