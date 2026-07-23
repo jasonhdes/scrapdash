@@ -62,11 +62,16 @@ class MercadoLivreAuthController extends Controller
             return redirect()->away("{$frontendUrl}?ml_connected=0&reason=falha_troca_token");
         }
 
+        if (empty($token['access_token'])) {
+            return redirect()->away("{$frontendUrl}?ml_connected=0&reason=resposta_sem_access_token");
+        }
+
         $account->update([
             'mercadolivre_user_id' => $token['user_id'] ?? null,
             'mercadolivre_access_token' => $token['access_token'],
-            'mercadolivre_refresh_token' => $token['refresh_token'],
-            'mercadolivre_token_expires_at' => now()->addSeconds($token['expires_in']),
+            'mercadolivre_refresh_token' => $token['refresh_token'] ?? null,
+            // Mercado Livre nem sempre retorna expires_in; 21600s (6h) é o TTL padrão documentado.
+            'mercadolivre_token_expires_at' => now()->addSeconds($token['expires_in'] ?? 21600),
         ]);
 
         return redirect()->away("{$frontendUrl}?ml_connected=1&account_id={$account->id}");
