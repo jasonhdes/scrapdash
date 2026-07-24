@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MercadoLivre\MercadoLivreAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,4 +22,5 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:api')->group(function () {
     Route::get('accounts', [AccountController::class, 'index']);
     Route::post('accounts/{account}/mercadolivre/connect', [MercadoLivreAuthController::class, 'connect']);
+    Route::get('accounts/{account}/dashboard', [DashboardController::class, 'show']);
 });

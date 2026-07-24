@@ -44,7 +44,7 @@
 .field input {
   padding: 10px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(128, 128, 128, 0.4);
+  border: 1px solid var(--color05);
   background: transparent;
   color: inherit;
   font-size: 1rem;
@@ -54,8 +54,8 @@
   padding: 10px 12px;
   border-radius: 6px;
   border: none;
-  background: #171717;
-  color: #ffffff;
+  background: var(--color02);
+  color: var(--color01);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -68,13 +68,13 @@
 
 @media (prefers-color-scheme: dark) {
   .submit {
-    background: #ededed;
-    color: #171717;
+    background: var(--color04);
+    color: var(--color02);
   }
 }
 
 .error {
-  color: #e5484d;
+  color: var(--color07);
   font-size: 0.85rem;
 }
 

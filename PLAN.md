@@ -88,25 +88,33 @@ scrapdash-app/
 
 - [X] Migrations: `products`, `orders`, `payments` (`belongsTo Order`), `messages` (`belongsTo Account`/`Order` nullable) — aplicadas via `php artisan migrate`. Adicionamos também `sync_logs` (não estava no plano original) para dar suporte ao item de logs abaixo.
 - [X] `RefreshTokenJob` — renova o token via `MercadoLivreService::refreshAccountToken`; testado tanto com token expirado sem `refresh_token` (falha tratada e logada, exige reconexão) quanto via `MercadoLivreService`.
-- [X] `SyncProductsJob`, `SyncOrdersJob`, `SyncPaymentsJob`, `SyncMessagesJob` — testados com `Http::fake()` simulando respostas reais da API do Mercado Livre: produtos, pedidos, pagamentos (disparados em cascata pelo `SyncOrdersJob`, já que a API do ML embute os pagamentos no recurso de pedido — não existe endpoint separado de "pagamentos do vendedor") e mensagens (via `messages/packs/{order_id}/sellers/{user_id}`) foram gravados corretamente no banco.
-- [X] Configurar Laravel Queue — driver `database` (já configurado desde o Sprint 1); jobs implementam `ShouldQueue` com `$tries`/`$backoff` para retentativa.
-- [X] Configurar Scheduler — `routes/console.php` agenda `RefreshTokenJob` (a cada 5min, para tokens expirando em <30min), sincronização completa (a cada 15min) e `CleanupJob` (diário). Registrado no Windows via **Task Scheduler** (`scripts/run-scheduler.bat`, ver `scripts/INSTRUCOES_SCHEDULER.md`), testado com execução manual (`schtasks /run`) e log confirmando funcionamento.
+- [X] `SyncProductsJob`, `SyncOrdersJob`, `SyncPaymentsJob`, `SyncMessagesJob` — validados com **dados reais** de uma conta de vendedor de verdade: 348 produtos, 1004 pedidos, 1040+ pagamentos e 222 mensagens sincronizados com sucesso.
+- [X] Configurar Laravel Queue — driver `database` (já configurado desde o Sprint 1); jobs implementam `ShouldQueue` com `$tries`/`$backoff` para retentativa. Também criamos a tarefa **"ScrapDash Laravel Queue Worker"** no Task Scheduler (roda `queue:work --stop-when-empty` a cada minuto, ver `scripts/INSTRUCOES_SCHEDULER.md`) — sem ela, os jobs ficavam só enfileirados e nunca eram processados (era o motivo do dashboard aparecer zerado mesmo com a conta conectada).
+- [X] Configurar Scheduler — `routes/console.php` agenda `RefreshTokenJob` (a cada 5min, para tokens expirando em <30min), sincronização completa (a cada 15min) e `CleanupJob` (diário). Registrado no Windows via **Task Scheduler** (`scripts/run-scheduler.bat`).
 - [X] `CleanupJob` — remove registros de `sync_logs` com mais de 30 dias.
-- [X] Logs de sincronização e tratamento de falhas/retentativas — tabela `sync_logs` (account/type/status/message/items_synced) alimentada por todos os jobs via trait `LogsSyncActivity`; testado o caminho de falha real (token expirado do Mercado Livre) e confirmado que fica registrado como `failed` com a mensagem de erro da API, sem quebrar a aplicação.
+- [X] Logs de sincronização e tratamento de falhas/retentativas — tabela `sync_logs` (account/type/status/message/items_synced) alimentada por todos os jobs via trait `LogsSyncActivity`.
 
-**Entregável:** dados de produtos/pedidos/pagamentos/mensagens sincronizando automaticamente do Mercado Livre para o MySQL local. ✅ Pipeline validado (dados simulados via `Http::fake`, já que a conta de teste conectada no Sprint 3 não tem produtos/pedidos reais); falta apenas validar com dados reais quando houver uma conta de vendedor com histórico de vendas conectada, e reconectar a conta de teste (token expirou, sem `refresh_token`) para exercitar o fluxo automático ponta a ponta.
+**Bugs reais encontrados e corrigidos ao testar com dados de produção** (só apareceram com volume real, não em teste sintético):
+  - `mercadolivre:sync-data` ficava travado com um mutex de `withoutOverlapping()` preso (provavelmente de uma execução anterior interrompida durante testes) e nunca mais rodava — corrigido com `php artisan schedule:clear-cache`.
+  - `SyncOrdersJob` despachava `SyncPaymentsJob::dispatch()` com o array inteiro de pedidos (até 1000, com todos os dados aninhados da API) — para um vendedor com histórico grande, isso estourava o `max_allowed_packet` do MySQL ao tentar serializar na tabela `jobs` e derrubava a conexão. Corrigido chamando `(new SyncPaymentsJob(...))->handle()` diretamente (em processo, sem passar pela fila), já que os dados já estão em memória.
+  - `SyncMessagesJob` assumia que `pack_id` (usado pra buscar mensagens) é sempre igual ao id do pedido — falso para pedidos que fazem parte de uma compra com múltiplos itens (API retorna 400 `order_belong_pack`). Adicionada a coluna `orders.pack_id` (populada pelo `SyncOrdersJob`) e passamos a deduplicar por pack antes de consultar mensagens, evitando chamadas repetidas para pedidos do mesmo pack.
+  - Um pack com erro (rate limit da API, ou uma inconsistência pontual do Mercado Livre) abortava a sincronização de mensagens inteira — agora falhas por pack são logadas e puladas, sem derrubar o job todo.
+  - Chamadas HTTP ao Mercado Livre não tinham timeout — adicionado `->timeout(30)` em todas.
+
+**Entregável:** dados de produtos/pedidos/pagamentos/mensagens sincronizando automaticamente do Mercado Livre para o MySQL local. ✅ Validado de ponta a ponta com dados reais de produção.
 
 ---
 
 ## Sprint 5 — Dashboard
 
-- [ ] Endpoints agregados de KPIs (Receita, Pedidos, Produtos, Financeiro, Pagamentos, Mensagens, Alertas).
-- [ ] Camada de cache para consultas pesadas do dashboard.
-- [ ] Componentes de dashboard no Next.js (cards de KPI, gráficos).
-- [ ] Seleção de conta ativa (multi-account por usuário).
-- [ ] Atualização em tempo real ou near-real-time (polling ou websockets — **a decidir com você**).
+- [X] Endpoint agregado de KPIs (`GET /api/accounts/{account}/dashboard`, `DashboardService`) — Receita (soma de pedidos `paid`), Pedidos (total + por status), Produtos (total + ativos), Pagamentos (por status), Mensagens (total + recebidas) e Alertas (não conectado / token expirado ou expirando / falhas de sincronização nas últimas 24h). Testado via curl com dados reais e checado autorização cross-account (403 ao tentar ver dashboard de conta de outro usuário).
+- [X] Camada de cache — `Cache::remember` com TTL de 30s por conta; confirmado via curl (duas chamadas seguidas retornam o mesmo `generated_at`).
+- [X] Componentes de dashboard no Next.js (`KpiCard`, cards de Receita/Pedidos/Produtos/Pagamentos/Mensagens + lista de alertas) — sem gráficos ainda (fica para quando houver mais dado histórico real para visualizar; os cards já cobrem o "Entregável" do sprint). Quando o token do Mercado Livre expira, os cards ficam borrados com um botão "Atualizar" nítido sobreposto (em vez de simplesmente somem os KPIs sem explicação) — corrigido um bug real encontrado em teste manual: o botão de (re)conexão só aparecia na primeira vez, nunca mais depois que a conta expirava, deixando o usuário sem como agir.
+- [X] Seleção de conta ativa (`AccountSelector`) — funciona com múltiplas accounts (só aparece se o usuário tiver mais de uma) e persiste a escolha em `localStorage`. Como hoje cada usuário só tem a "Conta Principal" criada automaticamente, o cenário multi-account ainda não foi validado com dados reais (não há tela para criar novas accounts).
+- [X] Atualização em tempo real — **decidido com você: polling**, a cada 30s (`useDashboard` hook), alinhado com o TTL do cache do backend.
+- [X] **Extra:** filtro de período (data de início/fim) — `DateRangeFilter` no frontend, persistido em `localStorage`; backend aceita `start_date`/`end_date` na query string e filtra Receita/Pedidos/Pagamentos pela data real da venda no Mercado Livre (nova coluna `orders.ordered_at`, populada a partir de `date_created` da API — antes só tínhamos a data em que *nós* sincronizamos, não a data da venda). Produtos e Mensagens continuam mostrando o total geral (não fazia sentido "filtrar por data" esses dois nesta fase). Validado no navegador com dados reais: período de 01/07 a 24/07 mostrou R$ 31.941,01 (contra R$ 114.559,79 sem filtro), números batendo.
 
-**Entregável:** dashboard funcional exibindo KPIs reais da conta conectada.
+**Entregável:** dashboard funcional exibindo KPIs reais da conta conectada. ✅ Validado de ponta a ponta com dados reais de produção (incluindo o ciclo de token expirado → blur → "Atualizar" → reconectado, e o filtro de período).
 
 ---
 

@@ -41,7 +41,7 @@ class MercadoLivreService
      */
     public function exchangeCodeForToken(string $code, string $codeVerifier): array
     {
-        $response = Http::asForm()->post(config('services.mercadolivre.api_url').'/oauth/token', [
+        $response = Http::asForm()->timeout(30)->post(config('services.mercadolivre.api_url').'/oauth/token', [
             'grant_type' => 'authorization_code',
             'client_id' => config('services.mercadolivre.client_id'),
             'client_secret' => config('services.mercadolivre.client_secret'),
@@ -62,7 +62,7 @@ class MercadoLivreService
      */
     public function refreshAccessToken(string $refreshToken): array
     {
-        $response = Http::asForm()->post(config('services.mercadolivre.api_url').'/oauth/token', [
+        $response = Http::asForm()->timeout(30)->post(config('services.mercadolivre.api_url').'/oauth/token', [
             'grant_type' => 'refresh_token',
             'client_id' => config('services.mercadolivre.client_id'),
             'client_secret' => config('services.mercadolivre.client_secret'),
@@ -173,15 +173,17 @@ class MercadoLivreService
     }
 
     /**
-     * As mensagens de um pedido no Mercado Livre ficam agrupadas em um "pack"
-     * cujo id, na prática, corresponde ao id do pedido para mensagens pós-venda.
+     * As mensagens de um pedido no Mercado Livre ficam agrupadas em um "pack".
+     * Para pedidos avulsos, o pack id é o próprio id do pedido; para pedidos que
+     * fazem parte de uma compra com múltiplos itens, é preciso usar o `pack_id`
+     * do pedido — usar o id do pedido nesse caso retorna 400 "order_belong_pack".
      *
      * @return array<int, array<string, mixed>>
      */
-    public function getOrderMessages(Account $account, string $orderId): array
+    public function getOrderMessages(Account $account, string $packId): array
     {
         $response = $this->authorizedRequest($account)->get(
-            config('services.mercadolivre.api_url')."/messages/packs/{$orderId}/sellers/{$account->mercadolivre_user_id}",
+            config('services.mercadolivre.api_url')."/messages/packs/{$packId}/sellers/{$account->mercadolivre_user_id}",
             ['tag' => 'post_sale'],
         );
 
@@ -196,7 +198,7 @@ class MercadoLivreService
 
     private function authorizedRequest(Account $account): PendingRequest
     {
-        return Http::withToken($account->mercadolivre_access_token);
+        return Http::withToken($account->mercadolivre_access_token)->timeout(30);
     }
 
     private function assertSuccessful(Response $response, string $message): void

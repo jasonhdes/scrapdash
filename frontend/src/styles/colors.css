@@ -1,0 +1,11 @@
+:root {
+  --color01: #ffffff; /* branco - fundo claro, texto de botão sobre fundo escuro */
+  --color02: #171717; /* quase preto - texto claro, fundo de botão primário */
+  --color03: #0a0a0a; /* fundo escuro */
+  --color04: #ededed; /* cinza claro - texto/fundo de botão no modo escuro */
+  --color05: rgba(128, 128, 128, 0.4); /* borda - inputs e selects */
+  --color06: rgba(128, 128, 128, 0.25); /* borda - cards */
+  --color07: #e5484d; /* vermelho - texto de erro */
+  --color08: rgba(229, 72, 77, 0.12); /* vermelho - fundo de alerta */
+  --color09: rgba(229, 72, 77, 0.35); /* vermelho - borda de alerta */
+}
