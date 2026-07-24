@@ -2,6 +2,9 @@
 
 namespace App\Infrastructure\MercadoLivre;
 
+use App\Models\Account;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -71,5 +74,135 @@ class MercadoLivreService
         }
 
         return $response->json();
+    }
+
+    /**
+     * Renova o token da account e persiste o resultado, se ainda houver refresh_token.
+     */
+    public function refreshAccountToken(Account $account): void
+    {
+        if (! $account->mercadolivre_refresh_token) {
+            throw new RuntimeException("Account #{$account->id} não tem refresh_token — é preciso reconectar.");
+        }
+
+        $token = $this->refreshAccessToken($account->mercadolivre_refresh_token);
+
+        $account->update([
+            'mercadolivre_access_token' => $token['access_token'],
+            'mercadolivre_refresh_token' => $token['refresh_token'] ?? $account->mercadolivre_refresh_token,
+            'mercadolivre_token_expires_at' => now()->addSeconds($token['expires_in'] ?? 21600),
+        ]);
+    }
+
+    /**
+     * @return array<int, string> IDs dos itens (paginado, limitado a 1000 resultados por busca padrão da API).
+     */
+    public function searchItemIds(Account $account): array
+    {
+        $ids = [];
+        $offset = 0;
+        $limit = 50;
+
+        do {
+            $response = $this->authorizedRequest($account)->get(
+                config('services.mercadolivre.api_url')."/users/{$account->mercadolivre_user_id}/items/search",
+                ['offset' => $offset, 'limit' => $limit],
+            );
+
+            $this->assertSuccessful($response, 'Falha ao buscar itens do Mercado Livre');
+
+            $page = $response->json('results') ?? [];
+            $ids = array_merge($ids, $page);
+            $offset += $limit;
+            $total = $response->json('paging.total') ?? 0;
+        } while (count($ids) < $total && count($page) > 0 && $offset < 1000);
+
+        return $ids;
+    }
+
+    /**
+     * @param  array<int, string>  $itemIds
+     * @return array<int, array<string, mixed>>
+     */
+    public function getItemsDetails(Account $account, array $itemIds): array
+    {
+        $items = [];
+
+        foreach (array_chunk($itemIds, 20) as $chunk) {
+            $response = $this->authorizedRequest($account)->get(
+                config('services.mercadolivre.api_url').'/items',
+                ['ids' => implode(',', $chunk)],
+            );
+
+            $this->assertSuccessful($response, 'Falha ao buscar detalhes dos itens do Mercado Livre');
+
+            foreach ($response->json() ?? [] as $entry) {
+                if (($entry['code'] ?? null) === 200) {
+                    $items[] = $entry['body'];
+                }
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function searchOrders(Account $account): array
+    {
+        $orders = [];
+        $offset = 0;
+        $limit = 50;
+
+        do {
+            $response = $this->authorizedRequest($account)->get(
+                config('services.mercadolivre.api_url').'/orders/search',
+                ['seller' => $account->mercadolivre_user_id, 'offset' => $offset, 'limit' => $limit, 'sort' => 'date_desc'],
+            );
+
+            $this->assertSuccessful($response, 'Falha ao buscar pedidos do Mercado Livre');
+
+            $page = $response->json('results') ?? [];
+            $orders = array_merge($orders, $page);
+            $offset += $limit;
+            $total = $response->json('paging.total') ?? 0;
+        } while (count($orders) < $total && count($page) > 0 && $offset < 1000);
+
+        return $orders;
+    }
+
+    /**
+     * As mensagens de um pedido no Mercado Livre ficam agrupadas em um "pack"
+     * cujo id, na prática, corresponde ao id do pedido para mensagens pós-venda.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getOrderMessages(Account $account, string $orderId): array
+    {
+        $response = $this->authorizedRequest($account)->get(
+            config('services.mercadolivre.api_url')."/messages/packs/{$orderId}/sellers/{$account->mercadolivre_user_id}",
+            ['tag' => 'post_sale'],
+        );
+
+        if ($response->status() === 404) {
+            return [];
+        }
+
+        $this->assertSuccessful($response, 'Falha ao buscar mensagens do pedido no Mercado Livre');
+
+        return $response->json('messages') ?? [];
+    }
+
+    private function authorizedRequest(Account $account): PendingRequest
+    {
+        return Http::withToken($account->mercadolivre_access_token);
+    }
+
+    private function assertSuccessful(Response $response, string $message): void
+    {
+        if ($response->failed()) {
+            throw new RuntimeException("{$message}: {$response->body()}");
+        }
     }
 }

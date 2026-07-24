@@ -51,8 +51,46 @@ class Account extends Model
         return $this->hasMany(Employee::class);
     }
 
+    /**
+     * @return HasMany<Product, $this>
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    /**
+     * @return HasMany<Order, $this>
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
+     * @return HasMany<Message, $this>
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class);
+    }
+
+    /**
+     * @return HasMany<SyncLog, $this>
+     */
+    public function syncLogs(): HasMany
+    {
+        return $this->hasMany(SyncLog::class);
+    }
+
     public function isConnectedToMercadoLivre(): bool
     {
         return ! is_null($this->mercadolivre_access_token);
+    }
+
+    public function mercadoLivreTokenExpiresSoon(): bool
+    {
+        return $this->mercadolivre_token_expires_at !== null
+            && $this->mercadolivre_token_expires_at->isBefore(now()->addMinutes(30));
     }
 }

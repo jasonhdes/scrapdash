@@ -86,15 +86,15 @@ scrapdash-app/
 
 ## Sprint 4 — Sincronização de Dados
 
-- [ ] Migrations: `products`, `orders`, `payments`, `messages`.
-- [ ] `RefreshTokenJob` (renovação automática de token).
-- [ ] `SyncProductsJob`, `SyncOrdersJob`, `SyncPaymentsJob`, `SyncMessagesJob`.
-- [ ] Configurar Laravel Queue (driver: database, ou Redis se disponível).
-- [ ] Configurar Scheduler (Laravel Task Scheduling) — no XAMPP isso normalmente requer Cron/Task Scheduler do Windows apontando para `artisan schedule:run`.
-- [ ] `CleanupJob` (rotina de limpeza de dados obsoletos/staging).
-- [ ] Logs de sincronização e tratamento de falhas/retentativas.
+- [X] Migrations: `products`, `orders`, `payments` (`belongsTo Order`), `messages` (`belongsTo Account`/`Order` nullable) — aplicadas via `php artisan migrate`. Adicionamos também `sync_logs` (não estava no plano original) para dar suporte ao item de logs abaixo.
+- [X] `RefreshTokenJob` — renova o token via `MercadoLivreService::refreshAccountToken`; testado tanto com token expirado sem `refresh_token` (falha tratada e logada, exige reconexão) quanto via `MercadoLivreService`.
+- [X] `SyncProductsJob`, `SyncOrdersJob`, `SyncPaymentsJob`, `SyncMessagesJob` — testados com `Http::fake()` simulando respostas reais da API do Mercado Livre: produtos, pedidos, pagamentos (disparados em cascata pelo `SyncOrdersJob`, já que a API do ML embute os pagamentos no recurso de pedido — não existe endpoint separado de "pagamentos do vendedor") e mensagens (via `messages/packs/{order_id}/sellers/{user_id}`) foram gravados corretamente no banco.
+- [X] Configurar Laravel Queue — driver `database` (já configurado desde o Sprint 1); jobs implementam `ShouldQueue` com `$tries`/`$backoff` para retentativa.
+- [X] Configurar Scheduler — `routes/console.php` agenda `RefreshTokenJob` (a cada 5min, para tokens expirando em <30min), sincronização completa (a cada 15min) e `CleanupJob` (diário). Registrado no Windows via **Task Scheduler** (`scripts/run-scheduler.bat`, ver `scripts/INSTRUCOES_SCHEDULER.md`), testado com execução manual (`schtasks /run`) e log confirmando funcionamento.
+- [X] `CleanupJob` — remove registros de `sync_logs` com mais de 30 dias.
+- [X] Logs de sincronização e tratamento de falhas/retentativas — tabela `sync_logs` (account/type/status/message/items_synced) alimentada por todos os jobs via trait `LogsSyncActivity`; testado o caminho de falha real (token expirado do Mercado Livre) e confirmado que fica registrado como `failed` com a mensagem de erro da API, sem quebrar a aplicação.
 
-**Entregável:** dados de produtos/pedidos/pagamentos/mensagens sincronizando automaticamente do Mercado Livre para o MySQL local.
+**Entregável:** dados de produtos/pedidos/pagamentos/mensagens sincronizando automaticamente do Mercado Livre para o MySQL local. ✅ Pipeline validado (dados simulados via `Http::fake`, já que a conta de teste conectada no Sprint 3 não tem produtos/pedidos reais); falta apenas validar com dados reais quando houver uma conta de vendedor com histórico de vendas conectada, e reconectar a conta de teste (token expirou, sem `refresh_token`) para exercitar o fluxo automático ponta a ponta.
 
 ---
 
