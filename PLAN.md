@@ -14,7 +14,7 @@ Pontos que **sempre** exigem sua decisão antes de eu prosseguir: credenciais re
 1. [X] PHP 8.2.12 / MariaDB 10.4.32 disponíveis via XAMPP (`C:\xampp\php`, `C:\xampp\mysql\bin` — adicionados ao PATH do usuário).
 2. [X] Node.js v24.18.0 / npm 11.16.0 instalados.
 3. [X] Composer 2.10.1 disponível (`C:\xampp\php\composer.phar`).
-4. [ ] Conta no Mercado Livre DevCenter — a confirmar antes do Sprint 3.
+4. [X] Conta no Mercado Livre DevCenter — aplicação criada, Client ID/Secret fornecidos e usados no Sprint 3.
 5. [X] Domínio local definido: **`scrapdash.local`** (não usamos `scrapdash.local`).
 
 ## Estrutura de Diretórios Alvo
@@ -76,9 +76,11 @@ scrapdash-app/
 - [X] Rota de callback `/auth/mercadolivre/callback` (`routes/web.php`) — testada com state inválido e code falso, ambos tratados com redirect de erro para o frontend.
 - [X] Persistir tokens (access/refresh) vinculados à `Account` — implementado em `MercadoLivreAuthController::callback` (campos criptografados via cast `encrypted`); caminho de sucesso só será exercitado quando um usuário real completar o consentimento (ver item abaixo).
 - [X] Tela no frontend para "Conectar conta Mercado Livre" (`/dashboard`) — testada via Playwright: gera a URL de autorização e navega até a tela de login real do Mercado Livre com os parâmetros corretos.
-- [ ] Testar fluxo completo em ambiente de desenvolvimento — **bloqueado para automação**: o Mercado Livre bloqueia navegador headless/automatizado na tela de login (proteção antibot deles), então essa etapa final (login real + consentimento) só pode ser feita manualmente por você no navegador. Peço que teste clicando em "Conectar conta Mercado Livre" no dashboard e confirme se volta com "Conta do Mercado Livre conectada com sucesso."
+- [X] Testar fluxo completo em ambiente de desenvolvimento — **validado por você manualmente**: login real no Mercado Livre + consentimento concluído com sucesso. Confirmado no banco (`accounts.id=4`: `mercadolivre_user_id=102352093`, `mercadolivre_access_token` presente, `mercadolivre_token_expires_at` preenchido).
+  - No caminho, apareceu um bug real: a resposta de token do Mercado Livre não trouxe `refresh_token` (`tem_refresh_token=0` para essa conta), e o código assumia a chave sempre presente → erro 500. Corrigido lendo `refresh_token`/`expires_in` de forma defensiva (commit `e50ed8f`, "Corrige erro 500 no callback do Mercado Livre quando refresh_token não vem na resposta").
+  - ⚠️ **Esse fix está só na branch `tests001`, ainda não mesclado em `main`.** `main` continua com o bug original até a PR ser aberta e mesclada — não tratar este item como concluído em `main` até isso acontecer.
 
-**Entregável:** usuário consegue conectar uma conta do Mercado Livre via OAuth e o token fica salvo. Backend e frontend prontos e validados até o limite do que é automatizável; falta sua validação manual do handshake real.
+**Entregável:** usuário consegue conectar uma conta do Mercado Livre via OAuth e o token fica salvo. ✅ Validado de ponta a ponta (com o fix acima) — pendente apenas mesclar `tests001` em `main`.
 
 ---
 
