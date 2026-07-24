@@ -7,6 +7,7 @@ use App\Jobs\Concerns\LogsSyncActivity;
 use App\Models\Account;
 use App\Models\Order;
 use App\Models\SyncLog;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -34,17 +35,23 @@ class SyncOrdersJob implements ShouldQueue
                     ['mercadolivre_order_id' => (string) $orderData['id']],
                     [
                         'account_id' => $this->account->id,
+                        'pack_id' => isset($orderData['pack_id']) ? (string) $orderData['pack_id'] : null,
                         'status' => $orderData['status'] ?? null,
                         'total_amount' => $orderData['total_amount'] ?? null,
                         'currency' => $orderData['currency_id'] ?? null,
                         'buyer_nickname' => $orderData['buyer']['nickname'] ?? null,
+                        'ordered_at' => isset($orderData['date_created']) ? Carbon::parse($orderData['date_created']) : null,
                         'synced_at' => now(),
                     ],
                 );
             }
 
             if (! empty($orders)) {
-                SyncPaymentsJob::dispatch($this->account, $orders);
+                // Chamado em processo, não via ::dispatch(): $orders pode ter até 1000
+                // pedidos com todos os dados aninhados da API do ML, e serializar isso
+                // para a tabela `jobs` estoura o max_allowed_packet do MySQL. Como já
+                // estamos com os dados em memória aqui, não há motivo pra passar pela fila.
+                (new SyncPaymentsJob($this->account, $orders))->handle();
             }
 
             return count($orders);

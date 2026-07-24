@@ -14,10 +14,12 @@ class Order extends Model
     protected $fillable = [
         'account_id',
         'mercadolivre_order_id',
+        'pack_id',
         'status',
         'total_amount',
         'currency',
         'buyer_nickname',
+        'ordered_at',
         'synced_at',
     ];
 
@@ -25,6 +27,7 @@ class Order extends Model
     {
         return [
             'total_amount' => 'decimal:2',
+            'ordered_at' => 'datetime',
             'synced_at' => 'datetime',
         ];
     }

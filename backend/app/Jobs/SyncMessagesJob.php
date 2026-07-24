@@ -13,6 +13,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class SyncMessagesJob implements ShouldQueue
 {
@@ -32,8 +34,23 @@ class SyncMessagesJob implements ShouldQueue
 
             $orders = Order::where('account_id', $this->account->id)->get();
 
-            foreach ($orders as $order) {
-                $messages = $mercadoLivre->getOrderMessages($this->account, $order->mercadolivre_order_id);
+            // Pedidos que fazem parte da mesma compra (pack) compartilham a mesma
+            // conversa — agrupamos para não consultar (nem contar) o mesmo pack
+            // várias vezes, uma por pedido.
+            $orderByPack = $orders->unique(fn (Order $order) => $order->pack_id ?? $order->mercadolivre_order_id);
+
+            foreach ($orderByPack as $order) {
+                $packId = $order->pack_id ?? $order->mercadolivre_order_id;
+
+                try {
+                    $messages = $mercadoLivre->getOrderMessages($this->account, $packId);
+                } catch (Throwable $e) {
+                    // Um pack com erro (rate limit, inconsistência pontual da API do ML)
+                    // não deve abortar a sincronização inteira dos outros packs.
+                    Log::warning("SyncMessagesJob: pulando pack {$packId} (order {$order->mercadolivre_order_id}): {$e->getMessage()}");
+
+                    continue;
+                }
 
                 foreach ($messages as $messageData) {
                     Message::updateOrCreate(
