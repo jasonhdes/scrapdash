@@ -78,9 +78,9 @@ scrapdash-app/
 - [X] Tela no frontend para "Conectar conta Mercado Livre" (`/dashboard`) — testada via Playwright: gera a URL de autorização e navega até a tela de login real do Mercado Livre com os parâmetros corretos.
 - [X] Testar fluxo completo em ambiente de desenvolvimento — **validado por você manualmente**: login real no Mercado Livre + consentimento concluído com sucesso. Confirmado no banco (`accounts.id=4`: `mercadolivre_user_id=102352093`, `mercadolivre_access_token` presente, `mercadolivre_token_expires_at` preenchido).
   - No caminho, apareceu um bug real: a resposta de token do Mercado Livre não trouxe `refresh_token` (`tem_refresh_token=0` para essa conta), e o código assumia a chave sempre presente → erro 500. Corrigido lendo `refresh_token`/`expires_in` de forma defensiva (commit `e50ed8f`, "Corrige erro 500 no callback do Mercado Livre quando refresh_token não vem na resposta").
-  - ⚠️ **Esse fix está só na branch `tests001`, ainda não mesclado em `main`.** `main` continua com o bug original até a PR ser aberta e mesclada — não tratar este item como concluído em `main` até isso acontecer.
+  - Fix mesclado em `main` via PR #4 (branch `tests001`).
 
-**Entregável:** usuário consegue conectar uma conta do Mercado Livre via OAuth e o token fica salvo. ✅ Validado de ponta a ponta (com o fix acima) — pendente apenas mesclar `tests001` em `main`.
+**Entregável:** usuário consegue conectar uma conta do Mercado Livre via OAuth e o token fica salvo. ✅ Validado de ponta a ponta em `main`.
 
 ---
 
