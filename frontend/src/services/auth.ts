@@ -32,3 +32,10 @@ export function logout(token: string) {
     token,
   });
 }
+
+export function refresh(token: string) {
+  return apiFetch<AuthResponse>("/auth/refresh", {
+    method: "POST",
+    token,
+  });
+}

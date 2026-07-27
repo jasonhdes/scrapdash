@@ -19,6 +19,7 @@ class OrderController extends Controller
         Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
 
         $orders = $this->filteredQuery($request, $account)
+            ->with('approvedPayment')
             ->orderByDesc('ordered_at')
             ->paginate($request->integer('per_page', 20));
 
@@ -31,7 +32,7 @@ class OrderController extends Controller
 
         abort_if($order->account_id !== $account->id, 404);
 
-        return new OrderResource($order->load('payments'));
+        return new OrderResource($order->load('payments', 'approvedPayment'));
     }
 
     public function markProcessed(Request $request, Account $account, Order $order): OrderResource
@@ -51,14 +52,17 @@ class OrderController extends Controller
     {
         Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
 
-        $orders = $this->filteredQuery($request, $account)->orderByDesc('ordered_at')->get();
+        $orders = $this->filteredQuery($request, $account)
+            ->with('approvedPayment')
+            ->orderByDesc('ordered_at')
+            ->get();
 
         $filename = 'pedidos-'.$account->id.'-'.now()->format('Y-m-d_His').'.csv';
 
         return response()->streamDownload(function () use ($orders) {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF"); // BOM para acentuação abrir certo no Excel
-            fputcsv($handle, ['Pedido ML', 'Status', 'Valor total', 'Moeda', 'Comprador', 'Data do pedido', 'Processado em']);
+            fputcsv($handle, ['Pedido ML', 'Status', 'Valor total', 'Moeda', 'Comprador', 'Data do pedido', 'Processado em', 'Liberação do dinheiro']);
 
             foreach ($orders as $order) {
                 fputcsv($handle, [
@@ -69,6 +73,7 @@ class OrderController extends Controller
                     $order->buyer_nickname,
                     $order->ordered_at?->toDateTimeString(),
                     $order->processed_at?->toDateTimeString(),
+                    $order->approvedPayment?->money_release_date?->toDateTimeString(),
                 ]);
             }
 

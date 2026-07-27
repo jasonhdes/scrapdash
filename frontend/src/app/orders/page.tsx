@@ -10,7 +10,9 @@ import type { Order } from "@/types/order";
 import { AccountSelector } from "@/components/dashboard/AccountSelector";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
 import { NavBar } from "@/components/layout/NavBar";
+import { SessionGuard } from "@/components/auth/SessionGuard";
 import { Pagination } from "@/components/shared/Pagination";
+import { formatReleaseDate } from "@/utils/format";
 import styles from "@/styles/list.module.css";
 
 const STATUS_OPTIONS = [
@@ -120,15 +122,16 @@ export default function OrdersPage() {
       <div className={styles.container}>
         <NavBar />
 
-        <div className={styles.header}>
-          <div>
-            <h1 className={styles.title}>Pedidos</h1>
-            <p className={styles.subtitle}>Pedidos sincronizados do Mercado Livre.</p>
+        <SessionGuard>
+          <div className={styles.header}>
+            <div>
+              <h1 className={styles.title}>Pedidos</h1>
+              <p className={styles.subtitle}>Pedidos sincronizados do Mercado Livre.</p>
+            </div>
+            <AccountSelector accounts={accounts} selectedId={selectedAccountId} onChange={setSelectedAccountId} />
           </div>
-          <AccountSelector accounts={accounts} selectedId={selectedAccountId} onChange={setSelectedAccountId} />
-        </div>
 
-        <div className={styles.filters}>
+          <div className={styles.filters}>
           <div className={styles.field}>
             <label htmlFor="status">Status</label>
             <select
@@ -196,6 +199,7 @@ export default function OrdersPage() {
                   <th>Valor</th>
                   <th>Status</th>
                   <th>Data</th>
+                  <th>Liberação</th>
                   <th>Processado</th>
                   <th></th>
                 </tr>
@@ -214,6 +218,7 @@ export default function OrdersPage() {
                       <span className={styles.badge}>{order.status}</span>
                     </td>
                     <td>{formatDate(order.ordered_at)}</td>
+                    <td>{formatReleaseDate(order.money_release_date, order.money_released)}</td>
                     <td>{order.processed_at ? "Sim" : "Não"}</td>
                     <td>
                       <button
@@ -237,6 +242,7 @@ export default function OrdersPage() {
           total={meta.total}
           onChange={setPage}
         />
+        </SessionGuard>
       </div>
     </div>
   );

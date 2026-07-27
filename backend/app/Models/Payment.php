@@ -16,6 +16,9 @@ class Payment extends Model
         'status',
         'transaction_amount',
         'payment_method',
+        'paid_at',
+        'money_release_date',
+        'released',
         'synced_at',
     ];
 
@@ -23,6 +26,9 @@ class Payment extends Model
     {
         return [
             'transaction_amount' => 'decimal:2',
+            'paid_at' => 'datetime',
+            'money_release_date' => 'datetime',
+            'released' => 'boolean',
             'synced_at' => 'datetime',
         ];
     }

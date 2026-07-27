@@ -4,6 +4,9 @@ export interface Payment {
   status: string | null;
   transaction_amount: number;
   payment_method: string | null;
+  paid_at: string | null;
+  money_release_date: string | null;
+  released: boolean | null;
   synced_at: string | null;
 }
 
@@ -18,5 +21,7 @@ export interface Order {
   ordered_at: string | null;
   processed_at: string | null;
   synced_at: string | null;
+  money_release_date?: string | null;
+  money_released?: boolean | null;
   payments?: Payment[];
 }

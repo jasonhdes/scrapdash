@@ -4,6 +4,7 @@ use App\Jobs\CleanupJob;
 use App\Jobs\RefreshTokenJob;
 use App\Jobs\SyncMessagesJob;
 use App\Jobs\SyncOrdersJob;
+use App\Jobs\SyncPaymentReleaseDatesJob;
 use App\Jobs\SyncProductsJob;
 use App\Models\Account;
 use Illuminate\Foundation\Inspiring;
@@ -31,6 +32,7 @@ Schedule::call(function () {
         SyncProductsJob::dispatch($account);
         SyncOrdersJob::dispatch($account);
         SyncMessagesJob::dispatch($account);
+        SyncPaymentReleaseDatesJob::dispatch($account);
     });
 })->everyFifteenMinutes()->name('mercadolivre:sync-data')->withoutOverlapping();
 
