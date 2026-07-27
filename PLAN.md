@@ -120,12 +120,13 @@ scrapdash-app/
 
 ## Sprint 6 — Gestão de Vendas (Pedidos/Produtos)
 
-- [ ] CRUD e listagem de produtos com filtros/paginação.
-- [ ] Listagem e detalhe de pedidos, com status e fila de processamento.
-- [ ] Ações sobre pedidos (ex.: marcar como processado, exportar).
-- [ ] Telas Next.js correspondentes (pt-BR).
+- [X] Listagem de produtos com filtros/paginação — **decidido com você:** produtos são espelho somente-leitura do Mercado Livre (sem criar/editar/excluir, já que isso implicaria escrever de volta na API do ML). `GET /api/accounts/{account}/products` com filtro por `status` e busca por título, paginado (Laravel `paginate()`). Testado via curl com os 348 produtos reais.
+- [X] Listagem e detalhe de pedidos, com status e fila de processamento — `GET /api/accounts/{account}/orders` (filtros: `status`, `processed`, `start_date`/`end_date`) e `GET /.../orders/{order}` (com pagamentos). "Fila de processamento" implementada como filtro local `processed=0` (não é uma fila de verdade, é a listagem de pedidos ainda não marcados como processados). Testado com os 1005 pedidos reais.
+- [X] Ações sobre pedidos — marcar/desmarcar como processado (`PATCH .../orders/{order}/processed`, campo local `orders.processed_at`, não altera nada no Mercado Livre) e exportar CSV (`GET .../orders/export`, respeita os filtros ativos). Testado no navegador: marcar processado, desmarcar, exportar e baixar CSV com os 1005 pedidos reais.
+- [X] Telas Next.js correspondentes (pt-BR) — `/products` (tabela com miniatura, filtro de status e busca com debounce), `/orders` (tabela com filtros de status/processamento/período, botão de marcar processado, exportar CSV) e `/orders/[id]` (detalhe com pagamentos). Adicionada barra de navegação (`NavBar`) entre Dashboard/Produtos/Pedidos, e um hook compartilhado (`useAccounts`) pra manter a conta selecionada consistente entre as três telas.
+  - Ao rodar `npm run lint` pela primeira vez explicitamente neste projeto, apareceram 8 erros de uma regra nova e agressiva (`react-hooks/set-state-in-effect`) — inclusive em código de sprints anteriores nunca antes lintado dessa forma (só `tsc`+`build`, que não roda o ESLint). A regra sinaliza até `setState` dentro de callbacks assíncronos após um `await`, sem distinguir do padrão comum e seguro de "buscar dados quando uma dependência muda". Desativada essa regra específica no `eslint.config.mjs` com comentário explicando o motivo; `npm run lint` limpo agora.
 
-**Entregável:** módulos de Produtos e Pedidos utilizáveis end-to-end.
+**Entregável:** módulos de Produtos e Pedidos utilizáveis end-to-end. ✅ Validado no navegador com dados reais de produção (348 produtos, 1005 pedidos).
 
 ---
 

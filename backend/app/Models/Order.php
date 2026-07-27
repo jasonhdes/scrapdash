@@ -20,6 +20,7 @@ class Order extends Model
         'currency',
         'buyer_nickname',
         'ordered_at',
+        'processed_at',
         'synced_at',
     ];
 
@@ -28,6 +29,7 @@ class Order extends Model
         return [
             'total_amount' => 'decimal:2',
             'ordered_at' => 'datetime',
+            'processed_at' => 'datetime',
             'synced_at' => 'datetime',
         ];
     }

@@ -5,6 +5,8 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MercadoLivre\MercadoLivreAuthController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ProductController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -23,4 +25,12 @@ Route::middleware('auth:api')->group(function () {
     Route::get('accounts', [AccountController::class, 'index']);
     Route::post('accounts/{account}/mercadolivre/connect', [MercadoLivreAuthController::class, 'connect']);
     Route::get('accounts/{account}/dashboard', [DashboardController::class, 'show']);
+
+    Route::get('accounts/{account}/products', [ProductController::class, 'index']);
+    Route::get('accounts/{account}/products/{product}', [ProductController::class, 'show']);
+
+    Route::get('accounts/{account}/orders/export', [OrderController::class, 'export']);
+    Route::get('accounts/{account}/orders', [OrderController::class, 'index']);
+    Route::get('accounts/{account}/orders/{order}', [OrderController::class, 'show']);
+    Route::patch('accounts/{account}/orders/{order}/processed', [OrderController::class, 'markProcessed']);
 });
