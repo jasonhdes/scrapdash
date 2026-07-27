@@ -3,9 +3,8 @@
 import { createContext, useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import * as authService from "@/services/auth";
+import { TOKEN_STORAGE_KEY } from "@/services/api";
 import type { LoginPayload, RegisterPayload, User } from "@/types/auth";
-
-const TOKEN_STORAGE_KEY = "scrapdash_token";
 
 interface AuthContextValue {
   user: User | null;

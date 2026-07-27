@@ -141,18 +141,26 @@ class DashboardService
             ];
         }
 
-        $recentFailures = SyncLog::where('account_id', $account->id)
-            ->where('status', SyncLog::STATUS_FAILED)
+        // Só alerta se a sincronização mais recente de cada tipo falhou — se já
+        // teve uma sincronização bem-sucedida depois, o problema foi resolvido
+        // e o alerta não deve continuar aparecendo pelo resto das 24h.
+        $recentLogs = SyncLog::where('account_id', $account->id)
             ->where('created_at', '>=', now()->subDay())
-            ->selectRaw('type, count(*) as total')
-            ->groupBy('type')
-            ->get();
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('type');
 
-        foreach ($recentFailures as $failure) {
-            $alerts[] = [
-                'type' => 'sync_failed',
-                'message' => "Falha na sincronização de {$failure->type} nas últimas 24h ({$failure->total}x).",
-            ];
+        foreach ($recentLogs as $type => $logs) {
+            $mostRecent = $logs->first();
+
+            if ($mostRecent->status === SyncLog::STATUS_FAILED) {
+                $failuresSinceLastSuccess = $logs->takeWhile(fn ($log) => $log->status === SyncLog::STATUS_FAILED)->count();
+
+                $alerts[] = [
+                    'type' => 'sync_failed',
+                    'message' => "Falha na sincronização de {$type} ({$failuresSinceLastSuccess}x seguidas, última em {$mostRecent->created_at->format('d/m H:i')}).",
+                ];
+            }
         }
 
         return $alerts;
