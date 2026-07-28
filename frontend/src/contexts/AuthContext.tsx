@@ -35,11 +35,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authService
       .me(storedToken)
       .then(({ user: loadedUser }) => {
-        setToken(storedToken);
-        setUser(loadedUser);
+        // Só aplica o resultado se esse ainda for o token "atual" — evita
+        // sobrescrever um login mais novo feito enquanto essa checagem
+        // (de um token antigo guardado no localStorage) ainda estava em voo.
+        if (window.localStorage.getItem(TOKEN_STORAGE_KEY) === storedToken) {
+          setToken(storedToken);
+          setUser(loadedUser);
+        }
       })
       .catch(() => {
-        window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+        if (window.localStorage.getItem(TOKEN_STORAGE_KEY) === storedToken) {
+          window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+        }
       })
       .finally(() => setIsLoading(false));
   }, []);

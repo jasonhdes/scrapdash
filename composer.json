@@ -1,0 +1,15 @@
+{
+    "name": "jhscorp/scrapdash",
+    "description": "Scrap Dash — orquestra o app inteiro (backend Laravel + frontend Next.js) a partir da raiz do projeto.",
+    "type": "project",
+    "license": "proprietary",
+    "scripts": {
+        "dev": [
+            "Composer\\Config::disableProcessTimeout",
+            "cd backend && npx concurrently -n queue,scheduler,frontend -c \"#c4b5fd,#fdba74,#f472b6\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan schedule:work\" \"npm --prefix ../frontend run dev\" --kill-others"
+        ]
+    },
+    "scripts-descriptions": {
+        "dev": "Sobe o app inteiro de uma vez: worker da fila, scheduler (sync com o Mercado Livre a cada 5/15min) e o frontend Next.js. O backend em si já é servido pelo Apache/XAMPP via o VirtualHost scrapdash.local (não precisa de 'php artisan serve')."
+    }
+}
