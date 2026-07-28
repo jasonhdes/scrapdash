@@ -7,6 +7,7 @@ use App\Models\Account;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\SyncLog;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -51,6 +52,7 @@ class SyncPaymentsJob implements ShouldQueue
                             'status' => $paymentData['status'] ?? null,
                             'transaction_amount' => $paymentData['transaction_amount'] ?? null,
                             'payment_method' => $paymentData['payment_method_id'] ?? null,
+                            'paid_at' => isset($paymentData['date_approved']) ? Carbon::parse($paymentData['date_approved']) : null,
                             'synced_at' => now(),
                         ],
                     );

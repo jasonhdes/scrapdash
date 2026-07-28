@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/products", label: "Produtos" },
   { href: "/orders", label: "Pedidos" },
+  { href: "/financial", label: "Financeiro" },
 ];
 
 export function NavBar() {

@@ -14,6 +14,7 @@ interface AuthContextValue {
   register: (payload: RegisterPayload) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -34,11 +35,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     authService
       .me(storedToken)
       .then(({ user: loadedUser }) => {
-        setToken(storedToken);
-        setUser(loadedUser);
+        // Só aplica o resultado se esse ainda for o token "atual" — evita
+        // sobrescrever um login mais novo feito enquanto essa checagem
+        // (de um token antigo guardado no localStorage) ainda estava em voo.
+        if (window.localStorage.getItem(TOKEN_STORAGE_KEY) === storedToken) {
+          setToken(storedToken);
+          setUser(loadedUser);
+        }
       })
       .catch(() => {
-        window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+        if (window.localStorage.getItem(TOKEN_STORAGE_KEY) === storedToken) {
+          window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+        }
       })
       .finally(() => setIsLoading(false));
   }, []);
@@ -73,8 +81,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, [token]);
 
+  const refreshSession = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await authService.refresh(token);
+      window.localStorage.setItem(TOKEN_STORAGE_KEY, response.access_token);
+      setToken(response.access_token);
+      setUser(response.user);
+    } catch {
+      // Token já expirado: o apiFetch cuidou de limpar a sessão e mandar
+      // pro login (não dá pra renovar um token depois que ele já venceu).
+    }
+  }, [token]);
+
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, loginWithGoogle, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, login, register, loginWithGoogle, logout, refreshSession }}
+    >
       {children}
     </AuthContext.Provider>
   );

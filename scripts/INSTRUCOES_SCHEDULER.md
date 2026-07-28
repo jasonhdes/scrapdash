@@ -51,4 +51,4 @@ cd backend
 php artisan queue:work
 ```
 
-Ou usar `composer run dev`, que já sobe o `queue:listen` junto do servidor.
+Ou usar `composer dev` na raiz do projeto, que já sobe `queue:listen` e `schedule:work` juntos (mais o frontend). Se as tarefas do Task Scheduler acima já estiverem configuradas nesta máquina, rodar `composer dev` ao mesmo tempo é redundante mas inofensivo — os jobs usam `withoutOverlapping()`, então a segunda tentativa concorrente só é ignorada.

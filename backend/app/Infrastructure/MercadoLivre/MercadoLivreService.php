@@ -196,6 +196,32 @@ class MercadoLivreService
         return $response->json('messages') ?? [];
     }
 
+    /**
+     * A data de liberação do dinheiro (`money_release_date`) só vem no recurso
+     * completo do pagamento, não no resumo embutido no pedido — é preciso uma
+     * chamada por pagamento (endpoint legado `/collections/{id}`; o endpoint
+     * novo `/v1/payments/{id}` retornou 404 para os pagamentos testados).
+     *
+     * @return array{money_release_date: ?string, released: string}
+     */
+    public function getPaymentRelease(Account $account, string $paymentId): array
+    {
+        $response = $this->authorizedRequest($account)->get(
+            config('services.mercadolivre.api_url')."/collections/{$paymentId}",
+        );
+
+        if ($response->status() === 404) {
+            return ['money_release_date' => null, 'released' => 'no'];
+        }
+
+        $this->assertSuccessful($response, 'Falha ao buscar a liberação do pagamento no Mercado Livre');
+
+        return [
+            'money_release_date' => $response->json('money_release_date'),
+            'released' => $response->json('released', 'no'),
+        ];
+    }
+
     private function authorizedRequest(Account $account): PendingRequest
     {
         return Http::withToken($account->mercadolivre_access_token)->timeout(30);

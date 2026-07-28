@@ -8,6 +8,8 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { getOrder, markOrderProcessed } from "@/services/orders";
 import type { Order } from "@/types/order";
 import { NavBar } from "@/components/layout/NavBar";
+import { SessionGuard } from "@/components/auth/SessionGuard";
+import { formatReleaseDate } from "@/utils/format";
 import styles from "@/styles/list.module.css";
 
 function formatCurrency(value: number, currency: string | null) {
@@ -78,6 +80,7 @@ export default function OrderDetailPage() {
       <div className={styles.container}>
         <NavBar />
 
+        <SessionGuard>
         <Link href="/orders" className={styles.link}>
           ← Voltar para pedidos
         </Link>
@@ -110,6 +113,10 @@ export default function OrderDetailPage() {
                     <td>{formatDate(order.ordered_at)}</td>
                   </tr>
                   <tr>
+                    <th>Liberação do dinheiro</th>
+                    <td>{formatReleaseDate(order.money_release_date, order.money_released)}</td>
+                  </tr>
+                  <tr>
                     <th>Processado em</th>
                     <td>{formatDate(order.processed_at)}</td>
                   </tr>
@@ -140,6 +147,7 @@ export default function OrderDetailPage() {
                       <th>Status</th>
                       <th>Valor</th>
                       <th>Método</th>
+                      <th>Liberação</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -151,6 +159,7 @@ export default function OrderDetailPage() {
                         </td>
                         <td>{formatCurrency(payment.transaction_amount, order.currency)}</td>
                         <td>{payment.payment_method ?? "—"}</td>
+                        <td>{formatReleaseDate(payment.money_release_date, payment.released)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -161,6 +170,7 @@ export default function OrderDetailPage() {
             )}
           </>
         )}
+        </SessionGuard>
       </div>
     </div>
   );

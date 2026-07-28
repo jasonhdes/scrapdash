@@ -16,7 +16,14 @@ export class ApiError extends Error {
   }
 }
 
-function handleExpiredSession() {
+function handleExpiredSession(expiredToken: string) {
+  // Se um login mais novo já substituiu esse token enquanto essa requisição
+  // (com o token velho) ainda estava em voo, essa sessão nova é válida —
+  // não derruba ela por causa de uma resposta atrasada de um token antigo.
+  if (window.localStorage.getItem(TOKEN_STORAGE_KEY) !== expiredToken) {
+    return;
+  }
+
   window.localStorage.removeItem(TOKEN_STORAGE_KEY);
 
   const isOnPublicPath = PUBLIC_PATHS.some((path) => window.location.pathname.startsWith(path));
@@ -45,7 +52,7 @@ export async function apiFetch<T>(
     // A requisição tinha um token e ainda assim voltou 401: a sessão expirou
     // ou o token não é mais válido (não é o caso de "senha errada" no login,
     // que nunca envia token). Limpa a sessão e manda pro login de novo.
-    handleExpiredSession();
+    handleExpiredSession(token);
   }
 
   if (!response.ok) {

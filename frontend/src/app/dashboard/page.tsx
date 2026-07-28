@@ -11,6 +11,7 @@ import { KpiCard } from "@/components/dashboard/KpiCard";
 import { AccountSelector } from "@/components/dashboard/AccountSelector";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
 import { NavBar } from "@/components/layout/NavBar";
+import { SessionGuard } from "@/components/auth/SessionGuard";
 import styles from "@/styles/dashboard.module.css";
 
 const DATE_RANGE_STORAGE_KEY = "scrapdash_dashboard_date_range";
@@ -134,72 +135,74 @@ function DashboardContent() {
       <div className={styles.container}>
         <NavBar />
 
-        <div className={styles.header}>
-          <div>
-            <h1 className={styles.title}>Bem-vindo, {user.name}</h1>
-            <p className={styles.subtitle}>
-              {user.email} · perfil: {user.role}
-            </p>
-          </div>
-          <div className={styles.connectRow}>
-            <AccountSelector
-              accounts={accounts}
-              selectedId={selectedAccountId}
-              onChange={setSelectedAccountId}
-            />
-            <button className={styles.linkButton} onClick={handleLogout}>
-              Sair
-            </button>
-          </div>
-        </div>
-
-        {feedback && <p className={styles.subtitle}>{feedback}</p>}
-
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onChange={({ startDate: s, endDate: e }) => {
-            setStartDate(s);
-            setEndDate(e);
-          }}
-          onClear={() => {
-            setStartDate("");
-            setEndDate("");
-          }}
-        />
-
-        {needsConnect && (
-          <div className={styles.connectRow}>
-            <button className={styles.button} disabled={isBusy} onClick={() => handleConnect(selectedAccount)}>
-              {isBusy ? "Conectando..." : "Conectar conta Mercado Livre"}
-            </button>
-          </div>
-        )}
-
-        {dashboard && dashboard.alerts.length > 0 && (
-          <div className={styles.alerts}>
-            {dashboard.alerts.map((alert, i) => (
-              <div key={i} className={styles.alert}>
-                {alert.message}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {dashboardLoading && !dashboard ? (
-          <p className={styles.subtitle}>Carregando KPIs...</p>
-        ) : needsRefresh ? (
-          <div className={styles.blurWrapper}>
-            <div className={styles.blurredContent}>{kpiGrid}</div>
-            <div className={styles.blurOverlay}>
-              <button className={styles.button} disabled={isBusy} onClick={() => handleConnect(selectedAccount)}>
-                {isBusy ? "Atualizando..." : "Atualizar"}
+        <SessionGuard>
+          <div className={styles.header}>
+            <div>
+              <h1 className={styles.title}>Bem-vindo, {user.name}</h1>
+              <p className={styles.subtitle}>
+                {user.email} · perfil: {user.role}
+              </p>
+            </div>
+            <div className={styles.connectRow}>
+              <AccountSelector
+                accounts={accounts}
+                selectedId={selectedAccountId}
+                onChange={setSelectedAccountId}
+              />
+              <button className={styles.linkButton} onClick={handleLogout}>
+                Sair
               </button>
             </div>
           </div>
-        ) : (
-          kpiGrid
-        )}
+
+          {feedback && <p className={styles.subtitle}>{feedback}</p>}
+
+          <DateRangeFilter
+            startDate={startDate}
+            endDate={endDate}
+            onChange={({ startDate: s, endDate: e }) => {
+              setStartDate(s);
+              setEndDate(e);
+            }}
+            onClear={() => {
+              setStartDate("");
+              setEndDate("");
+            }}
+          />
+
+          {needsConnect && (
+            <div className={styles.connectRow}>
+              <button className={styles.button} disabled={isBusy} onClick={() => handleConnect(selectedAccount)}>
+                {isBusy ? "Conectando..." : "Conectar conta Mercado Livre"}
+              </button>
+            </div>
+          )}
+
+          {dashboard && dashboard.alerts.length > 0 && (
+            <div className={styles.alerts}>
+              {dashboard.alerts.map((alert, i) => (
+                <div key={i} className={styles.alert}>
+                  {alert.message}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {dashboardLoading && !dashboard ? (
+            <p className={styles.subtitle}>Carregando KPIs...</p>
+          ) : needsRefresh ? (
+            <div className={styles.blurWrapper}>
+              <div className={styles.blurredContent}>{kpiGrid}</div>
+              <div className={styles.blurOverlay}>
+                <button className={styles.button} disabled={isBusy} onClick={() => handleConnect(selectedAccount)}>
+                  {isBusy ? "Atualizando..." : "Atualizar"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            kpiGrid
+          )}
+        </SessionGuard>
       </div>
     </div>
   );

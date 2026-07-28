@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Order extends Model
 {
@@ -48,6 +49,17 @@ class Order extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Usado na listagem de pedidos pra trazer a data de liberação do dinheiro
+     * sem precisar carregar todos os pagamentos do pedido.
+     *
+     * @return HasOne<Payment, $this>
+     */
+    public function approvedPayment(): HasOne
+    {
+        return $this->hasOne(Payment::class)->where('status', 'approved')->latestOfMany('paid_at');
     }
 
     /**
