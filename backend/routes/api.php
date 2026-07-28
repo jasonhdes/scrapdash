@@ -32,6 +32,7 @@ Route::middleware('auth:api')->group(function () {
     Route::get('accounts/{account}/products/{product}', [ProductController::class, 'show']);
 
     Route::get('accounts/{account}/orders/export', [OrderController::class, 'export']);
+    Route::get('accounts/{account}/orders/sku-options', [OrderController::class, 'skuOptions']);
     Route::get('accounts/{account}/orders', [OrderController::class, 'index']);
     Route::get('accounts/{account}/orders/{order}', [OrderController::class, 'show']);
     Route::patch('accounts/{account}/orders/{order}/processed', [OrderController::class, 'markProcessed']);

@@ -9,7 +9,7 @@ import { getOrder, markOrderProcessed } from "@/services/orders";
 import type { Order } from "@/types/order";
 import { NavBar } from "@/components/layout/NavBar";
 import { SessionGuard } from "@/components/auth/SessionGuard";
-import { formatReleaseDate } from "@/utils/format";
+import { BRASILIA_TIMEZONE, formatReleaseDate } from "@/utils/format";
 import styles from "@/styles/list.module.css";
 
 function formatCurrency(value: number, currency: string | null) {
@@ -21,7 +21,7 @@ function formatCurrency(value: number, currency: string | null) {
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "—";
-  return new Date(value).toLocaleString("pt-BR");
+  return new Date(value).toLocaleString("pt-BR", { timeZone: BRASILIA_TIMEZONE });
 }
 
 export default function OrderDetailPage() {
@@ -93,7 +93,11 @@ export default function OrderDetailPage() {
               <div>
                 <h1 className={styles.title}>Pedido {order.mercadolivre_order_id}</h1>
                 <p className={styles.subtitle}>
-                  Comprador: {order.buyer_nickname ?? "—"} · Status: {order.status}
+                  Comprador: {order.buyer_nickname ?? "—"}
+                  {(order.buyer_city || order.buyer_state) && (
+                    <> ({[order.buyer_city, order.buyer_state].filter(Boolean).join("/")})</>
+                  )}{" "}
+                  · Status: {order.status}
                 </p>
               </div>
               <button className={styles.pageButton} disabled={isUpdating} onClick={handleToggleProcessed}>
@@ -133,6 +137,37 @@ export default function OrderDetailPage() {
                 </tbody>
               </table>
             </div>
+
+            <h2 className={styles.title} style={{ fontSize: "1.1rem" }}>
+              Produtos
+            </h2>
+
+            {order.items && order.items.length > 0 ? (
+              <div className={styles.tableWrapper}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th>SKU</th>
+                      <th>Quantidade</th>
+                      <th>Preço unitário</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {order.items.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.title}</td>
+                        <td>{item.seller_sku ?? "—"}</td>
+                        <td>{item.quantity}</td>
+                        <td>{item.unit_price !== null ? formatCurrency(item.unit_price, item.currency) : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className={styles.subtitle}>Nenhum produto sincronizado para este pedido.</p>
+            )}
 
             <h2 className={styles.title} style={{ fontSize: "1.1rem" }}>
               Pagamentos

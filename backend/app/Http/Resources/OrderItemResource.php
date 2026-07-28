@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ProductResource extends JsonResource
+class OrderItemResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -17,13 +17,9 @@ class ProductResource extends JsonResource
             'mercadolivre_item_id' => $this->mercadolivre_item_id,
             'title' => $this->title,
             'seller_sku' => $this->seller_sku,
-            'price' => (float) $this->price,
+            'quantity' => $this->quantity,
+            'unit_price' => $this->unit_price === null ? null : (float) $this->unit_price,
             'currency' => $this->currency,
-            'available_quantity' => $this->available_quantity,
-            'status' => $this->status,
-            'permalink' => $this->permalink,
-            'thumbnail' => $this->thumbnail,
-            'synced_at' => $this->synced_at,
         ];
     }
 }

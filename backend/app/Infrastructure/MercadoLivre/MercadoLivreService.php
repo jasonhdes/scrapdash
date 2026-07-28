@@ -222,6 +222,27 @@ class MercadoLivreService
         ];
     }
 
+    /**
+     * @return array{city: ?string, state: ?string}
+     */
+    public function getShipmentAddress(Account $account, string $shippingId): array
+    {
+        $response = $this->authorizedRequest($account)->get(
+            config('services.mercadolivre.api_url')."/shipments/{$shippingId}",
+        );
+
+        if ($response->status() === 404) {
+            return ['city' => null, 'state' => null];
+        }
+
+        $this->assertSuccessful($response, 'Falha ao buscar o endereço de entrega no Mercado Livre');
+
+        return [
+            'city' => $response->json('receiver_address.city.name'),
+            'state' => $response->json('receiver_address.state.name'),
+        ];
+    }
+
     private function authorizedRequest(Account $account): PendingRequest
     {
         return Http::withToken($account->mercadolivre_access_token)->timeout(30);

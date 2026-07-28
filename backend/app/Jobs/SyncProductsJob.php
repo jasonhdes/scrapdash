@@ -31,11 +31,17 @@ class SyncProductsJob implements ShouldQueue
             $items = $mercadoLivre->getItemsDetails($this->account, $itemIds);
 
             foreach ($items as $item) {
+                // O SKU só vem no atributo SELLER_SKU quando o produto não tem
+                // variações — com variações, cada uma pode ter um SKU
+                // diferente e não faz sentido resumir isso num campo só.
+                $sellerSku = collect($item['attributes'] ?? [])->firstWhere('id', 'SELLER_SKU')['value_name'] ?? null;
+
                 Product::updateOrCreate(
                     ['mercadolivre_item_id' => $item['id']],
                     [
                         'account_id' => $this->account->id,
                         'title' => $item['title'] ?? '',
+                        'seller_sku' => $sellerSku,
                         'price' => $item['price'] ?? null,
                         'currency' => $item['currency_id'] ?? null,
                         'available_quantity' => $item['available_quantity'] ?? 0,

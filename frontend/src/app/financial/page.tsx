@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useAccounts } from "@/hooks/useAccounts";
 import { listPayments, getFinancialSummary, getReconciliation } from "@/services/financial";
@@ -12,7 +13,7 @@ import { KpiCard } from "@/components/dashboard/KpiCard";
 import { NavBar } from "@/components/layout/NavBar";
 import { SessionGuard } from "@/components/auth/SessionGuard";
 import { Pagination } from "@/components/shared/Pagination";
-import { formatReleaseDate } from "@/utils/format";
+import { BRASILIA_TIMEZONE, formatReleaseDate } from "@/utils/format";
 import listStyles from "@/styles/list.module.css";
 import dashStyles from "@/styles/dashboard.module.css";
 
@@ -31,7 +32,7 @@ function formatCurrency(value: number) {
 
 function formatDate(value: string | null) {
   if (!value) return "—";
-  return new Date(value).toLocaleString("pt-BR");
+  return new Date(value).toLocaleString("pt-BR", { timeZone: BRASILIA_TIMEZONE });
 }
 
 export default function FinancialPage() {
@@ -185,7 +186,11 @@ export default function FinancialPage() {
                     <tbody>
                       {reconciliation.map((row) => (
                         <tr key={row.order_id}>
-                          <td>{row.mercadolivre_order_id}</td>
+                          <td>
+                            <Link href={`/orders/${row.order_id}`} className={listStyles.link}>
+                              {row.mercadolivre_order_id}
+                            </Link>
+                          </td>
                           <td>{formatDate(row.ordered_at)}</td>
                           <td>{formatCurrency(row.order_total)}</td>
                           <td>{formatCurrency(row.approved_amount)}</td>
@@ -256,7 +261,15 @@ export default function FinancialPage() {
                 <tbody>
                   {payments.map((payment) => (
                     <tr key={payment.id}>
-                      <td>{payment.order?.mercadolivre_order_id ?? "—"}</td>
+                      <td>
+                        {payment.order ? (
+                          <Link href={`/orders/${payment.order.id}`} className={listStyles.link}>
+                            {payment.order.mercadolivre_order_id}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td>
                         <span className={listStyles.badge}>{payment.status}</span>
                       </td>

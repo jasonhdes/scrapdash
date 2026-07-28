@@ -18,6 +18,8 @@ class SyncLog extends Model
 
     public const TYPE_PAYMENT_RELEASES = 'payment_releases';
 
+    public const TYPE_ORDER_ADDRESSES = 'order_addresses';
+
     public const TYPE_MESSAGES = 'messages';
 
     public const TYPE_REFRESH_TOKEN = 'refresh_token';
