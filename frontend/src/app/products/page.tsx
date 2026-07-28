@@ -133,7 +133,8 @@ export default function ProductsPage() {
                 <thead>
                   <tr>
                     <th></th>
-                    <th>Título</th>
+                    <th>Nome</th>
+                    <th>SKU</th>
                     <th>Preço</th>
                     <th>Estoque</th>
                     <th>Status</th>
@@ -153,6 +154,7 @@ export default function ProductsPage() {
                           {product.title}
                         </a>
                       </td>
+                      <td>{product.seller_sku ?? "—"}</td>
                       <td>{formatCurrency(product.price, product.currency)}</td>
                       <td>{product.available_quantity}</td>
                       <td>

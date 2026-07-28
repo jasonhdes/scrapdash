@@ -87,6 +87,28 @@
   background: var(--color06);
 }
 
+.sortableTh {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortableTh:hover {
+  background: var(--color06);
+}
+
+.skuSelect {
+  min-width: 220px;
+}
+
+.table td.productList {
+  white-space: normal;
+  min-width: 220px;
+}
+
+.productList div + div {
+  margin-top: 4px;
+}
+
 .thumb {
   width: 32px;
   height: 32px;

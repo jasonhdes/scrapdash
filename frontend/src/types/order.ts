@@ -10,6 +10,16 @@ export interface Payment {
   synced_at: string | null;
 }
 
+export interface OrderItem {
+  id: number;
+  mercadolivre_item_id: string;
+  title: string;
+  seller_sku: string | null;
+  quantity: number;
+  unit_price: number | null;
+  currency: string | null;
+}
+
 export interface Order {
   id: number;
   mercadolivre_order_id: string;
@@ -18,10 +28,13 @@ export interface Order {
   total_amount: number;
   currency: string | null;
   buyer_nickname: string | null;
+  buyer_city: string | null;
+  buyer_state: string | null;
   ordered_at: string | null;
   processed_at: string | null;
   synced_at: string | null;
   money_release_date?: string | null;
   money_released?: boolean | null;
+  items?: OrderItem[];
   payments?: Payment[];
 }

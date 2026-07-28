@@ -14,6 +14,7 @@ class Product extends Model
         'account_id',
         'mercadolivre_item_id',
         'title',
+        'seller_sku',
         'price',
         'currency',
         'available_quantity',
