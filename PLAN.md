@@ -175,13 +175,16 @@ scrapdash-app/
 
 ## Sprint 10 — Testes e Deploy
 
-- [ ] Testes automatizados (PHPUnit/Pest no backend; Jest/RTL no frontend) cobrindo os fluxos críticos (auth, OAuth, sync, permissões).
-- [ ] Revisão de segurança (rate limiting, validação de inputs, proteção de rotas).
-- [ ] Documentação em `docs/` (Arquitetura, BancoDeDados, API, Fluxos, RegrasDeNegocio, Permissoes, CasosDeUso, Deploy, Roadmap, Changelog).
-- [ ] **Decisão sua:** ambiente/estratégia de deploy de produção (continua XAMPP-like, ou migra para Docker/cloud como planejado originalmente?).
-- [ ] Checklist de go-live (HTTPS, redirect URI de produção no DevCenter, variáveis de ambiente de produção).
+- [X] **Decidido com você antes de implementar:** estratégia de deploy de produção — continua XAMPP-like (VPS/servidor tradicional com Apache+PHP+MySQL, sem containerização), não migra pra Docker/cloud agora. Documentado em `docs/Deploy.md`.
+- [X] Testes automatizados — PHPUnit no backend (Pest não está instalado no projeto apesar de citado no plano original; PHPUnit já era o que estava configurado, sem motivo pra trocar), Jest+RTL no frontend (instalado do zero, não existia nenhum tooling de teste no frontend antes).
+  - Backend: 22 testes cobrindo registro/login (com o rate limit novo), RBAC/permissões por módulo (dono, master, funcionário com/sem permissão, isolamento entre contas, gestão de funcionários restrita a dono/master), CRUD de funcionário completo com verificação de auditoria, e um job de sincronização (`SyncProductsJob`) com `Http::fake()` simulando a API do Mercado Livre — criação e atualização sem duplicar.
+  - Frontend: 18 testes cobrindo formatação de data/fuso, a lógica de expiração de token (`useTokenExpiry`), a correção da condição de corrida do login (`apiFetch`/`handleExpiredSession` — o teste reproduz exatamente o cenário do bug já corrigido) e o componente de grade de permissões.
+  - Achado real corrigido no processo: a migration que adiciona `user_partner` ao enum de `role` usava `ALTER TABLE ... MODIFY` (sintaxe exclusiva do MySQL) sem checar o driver — quebrava a suíte de testes inteira, que roda em SQLite em memória. Corrigido condicionando ao driver (`DB::getDriverName() === 'mysql'`).
+- [X] Revisão de segurança — achado real e corrigido: **não existia rate limiting em lugar nenhum da API**, incluindo login/registro (alvo clássico de força bruta). Adicionados dois limitadores (`AppServiceProvider`): `auth` (10/min por IP, nas rotas públicas de autenticação) e `api` (120/min por usuário, no resto da API autenticada). Validado com 11 tentativas de login seguidas: as 10 primeiras respondem normalmente, a 11ª já vem 429 — replicado tanto via curl quanto em teste automatizado. Revisão adicional sem achados: sem mass-assignment (`$fillable` allowlist em todo model, nenhum `$request->all()` direto em `create`/`update`), sem SQL bruto interpolando input do usuário, sem `dangerouslySetInnerHTML`/`eval` no frontend, verificação de ID token do Google já validava assinatura/issuer/audience/e-mail-verificado desde o Sprint 2.
+- [X] Documentação em `docs/` — os 10 arquivos pedidos (Arquitetura, BancoDeDados, API, Fluxos, RegrasDeNegocio, Permissoes, CasosDeUso, Deploy, Roadmap, Changelog), incluindo lacunas conhecidas registradas de propósito (sem tela de admin pro master, sem backup de banco configurado, vulnerabilidades de dependência herdadas do Next.js que a correção automática do `npm audit` resolveria com um downgrade inaceitável).
+- [X] Checklist de go-live — em `docs/Deploy.md`, cobrindo HTTPS real, `APP_DEBUG=false`, `JWT_SECRET` novo, redirect URI de produção no DevCenter, CORS, rate limiting confirmado ativo.
 
-**Entregável:** aplicação testada, documentada e pronta para deploy.
+**Entregável:** aplicação testada, documentada e pronta para deploy. ✅ 22 testes backend + 18 frontend passando, `pint`/`tsc`/`lint`/`build` limpos.
 
 ---
 
