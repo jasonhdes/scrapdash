@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Account extends Model
@@ -44,11 +45,14 @@ class Account extends Model
     }
 
     /**
-     * @return HasMany<Employee, $this>
+     * User Partners (funcionários) com acesso concedido a essa conta —
+     * o dono da conta (`user_id`) já tem acesso total e não passa por aqui.
+     *
+     * @return BelongsToMany<User, $this>
      */
-    public function employees(): HasMany
+    public function employees(): BelongsToMany
     {
-        return $this->hasMany(Employee::class);
+        return $this->belongsToMany(User::class)->using(AccountUser::class)->withPivot('permissions')->withTimestamps();
     }
 
     /**

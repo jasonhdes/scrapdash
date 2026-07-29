@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Application\Services\AuditLogger;
 use App\Http\Resources\OrderResource;
 use App\Models\Account;
 use App\Models\Order;
@@ -34,7 +35,7 @@ class OrderController extends Controller
 
     public function index(Request $request, Account $account): AnonymousResourceCollection
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'orders']);
 
         $orders = $this->applySort($this->filteredQuery($request, $account), $request)
             ->with('approvedPayment', 'items')
@@ -49,7 +50,7 @@ class OrderController extends Controller
      */
     public function skuOptions(Account $account): JsonResponse
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'orders']);
 
         $skus = OrderItem::whereHas('order', fn ($q) => $q->where('account_id', $account->id))
             ->whereNotNull('seller_sku')
@@ -64,7 +65,7 @@ class OrderController extends Controller
 
     public function show(Account $account, Order $order): OrderResource
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'orders']);
 
         abort_if($order->account_id !== $account->id, 404);
 
@@ -73,7 +74,8 @@ class OrderController extends Controller
 
     public function markProcessed(Request $request, Account $account, Order $order): OrderResource
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('update', $account);
+        $actor = Auth::guard('api')->user();
+        Gate::forUser($actor)->authorize('manageModule', [$account, 'orders']);
 
         abort_if($order->account_id !== $account->id, 404);
 
@@ -81,12 +83,19 @@ class OrderController extends Controller
 
         $order->update(['processed_at' => $validated['processed'] ? now() : null]);
 
+        AuditLogger::log(
+            $actor,
+            $validated['processed'] ? 'order.marked_processed' : 'order.unmarked_processed',
+            $account,
+            $order,
+        );
+
         return new OrderResource($order->load('payments', 'approvedPayment', 'items'));
     }
 
     public function export(Request $request, Account $account): StreamedResponse
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'orders']);
 
         $orders = $this->applySort($this->filteredQuery($request, $account), $request)
             ->with('approvedPayment')

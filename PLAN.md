@@ -160,16 +160,16 @@ scrapdash-app/
 
 ## Sprint 9 — Funcionários e Permissões
 
-- [ ] CRUD de funcionários vinculados a uma Account.
-- [ ] Roles e Permissions (RBAC) para os 3 perfis definidos no RESUMO.md — **definir com você a matriz de permissões final** antes de implementar as regras de negócio:
-  - **Master** — acesso total ao sistema.
-  - **User** — dono de conta(s), gerencia contas de marketplace, funcionários e operação.
-  - **User Partner** — acesso restrito conforme permissões atribuídas.
-- [ ] Policies aplicadas em todos os módulos.
-- [ ] Auditoria de ações (log de quem fez o quê) — fecha o fluxo de segurança `JWT → Middleware → Policies → Roles → Permissions → Auditoria → Logs`.
-- [ ] Telas de gestão de funcionários e permissões.
+- [X] **Decidido com você antes de implementar** (matriz de permissões final): "Funcionário" é o mesmo conceito de "User Partner" — faz login de verdade, não é só um registro de referência. Granularidade por módulo (Produtos/Pedidos/Financeiro/Mensagens) × ação (ver/gerenciar), configurável por funcionário. Cada funcionário só acessa as Accounts especificamente atribuídas a ele (não todas as do dono automaticamente).
+- [X] CRUD de funcionários vinculados a uma Account — `POST/PATCH/DELETE .../accounts/{account}/employees`. O scaffold antigo (tabela `employees` própria, sem login, do Sprint 2) foi removido: funcionário agora é um `User` de verdade (`role=user_partner`) ligado a contas via pivot `account_user` (permissões em JSON), reaproveitando 100% da autenticação JWT já existente em vez de um segundo guard paralelo.
+- [X] Roles e Permissions (RBAC) para os 3 perfis — `User::canAccessAccountModule()` resolve o acesso: master sempre livre, dono sempre livre na própria conta, user_partner conforme a permissão salva no pivot. `AccountPolicy::viewModule`/`manageModule` aplicam isso via Gate.
+- [X] Policies aplicadas em todos os módulos — `ProductController`, `OrderController` (inclusive `markProcessed`), `PaymentController`, `FinancialController`, `MessageController` (inclusive `reply`) trocaram o antigo `authorize('view'/'update', $account)` genérico (que não distinguia módulo nenhum) pelo novo `viewModule`/`manageModule` por módulo. `EmployeeController` continua exigindo `update` (só dono/master gerencia equipe — não é delegável).
+- [X] Auditoria de ações — tabela `audit_logs` (`AuditLogger::log()`), instrumentada em: criar/editar/remover funcionário, marcar/desmarcar pedido como processado, responder mensagem. Validado com dados reais: as 3 ações de funcionário geraram entradas corretas de auditoria.
+- [X] Telas de gestão de funcionários e permissões — `/employees` (formulário de criação com grade de permissões por módulo/ação, lista da equipe com permissões editáveis inline, remover acesso). `NavBar` some com os links de módulo que o usuário logado não pode ver (e o link "Funcionários" pra quem não é dono/master), usando as permissões que agora vêm embutidas em `GET /accounts` (campo novo `permissions` no `AccountResource`, resolvido pro usuário autenticado).
+  - Bug real encontrado testando: `BelongsToMany::attach()`/`updateExistingPivot()` não serializa array pra JSON sozinho sem um Pivot model dedicado — dava `Array to string conversion` do PDO. Corrigido criando `AccountUser extends Pivot` com cast `permissions => array`, usado via `->using(AccountUser::class)` nas duas pontas da relação.
+  - Validado com dados reais via curl: funcionário com `{"products":["view"],"orders":["view","manage"]}` — acessou produtos (200) e pedidos (200), bloqueado em financeiro (403) e mensagens (403), bloqueado na gestão de funcionários (403, só dono), viu só a conta atribuída em `/accounts` (não as outras contas do dono). Atualização de permissões e remoção de acesso testadas e confirmadas.
 
-**Entregável:** controle de acesso granular funcionando por perfil (Master / User / User Partner).
+**Entregável:** controle de acesso granular funcionando por perfil (Master / User / User Partner). ✅ Validado com dados reais de produção.
 
 ---
 

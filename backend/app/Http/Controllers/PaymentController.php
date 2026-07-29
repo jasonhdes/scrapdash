@@ -14,7 +14,7 @@ class PaymentController extends Controller
 {
     public function index(Request $request, Account $account): AnonymousResourceCollection
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'financial']);
 
         $payments = Payment::whereHas('order', fn ($q) => $q->where('account_id', $account->id))
             ->with('order:id,mercadolivre_order_id')

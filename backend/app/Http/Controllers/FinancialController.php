@@ -15,7 +15,7 @@ class FinancialController extends Controller
 {
     public function summary(Request $request, Account $account): JsonResponse
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'financial']);
 
         $validated = $request->validate([
             'start_date' => ['nullable', 'date'],
@@ -57,7 +57,7 @@ class FinancialController extends Controller
 
     public function reconciliation(Account $account): JsonResponse
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'financial']);
 
         $mismatches = Order::where('account_id', $account->id)
             ->where('status', 'paid')
