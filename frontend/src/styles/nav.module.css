@@ -21,3 +21,21 @@
   background: var(--color06);
   opacity: 1;
 }
+
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--color02);
+  color: var(--color01);
+}
+
+@media (prefers-color-scheme: dark) {
+  .badge {
+    background: var(--color04);
+    color: var(--color02);
+  }
+}

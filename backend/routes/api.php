@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinancialController;
 use App\Http\Controllers\MercadoLivre\MercadoLivreAuthController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
@@ -36,6 +37,10 @@ Route::middleware('auth:api')->group(function () {
     Route::get('accounts/{account}/orders', [OrderController::class, 'index']);
     Route::get('accounts/{account}/orders/{order}', [OrderController::class, 'show']);
     Route::patch('accounts/{account}/orders/{order}/processed', [OrderController::class, 'markProcessed']);
+
+    Route::get('accounts/{account}/messages', [MessageController::class, 'index']);
+    Route::get('accounts/{account}/orders/{order}/messages', [MessageController::class, 'show']);
+    Route::post('accounts/{account}/orders/{order}/messages', [MessageController::class, 'reply']);
 
     Route::get('accounts/{account}/payments', [PaymentController::class, 'index']);
     Route::get('accounts/{account}/financial/summary', [FinancialController::class, 'summary']);

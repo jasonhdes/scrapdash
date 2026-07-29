@@ -197,6 +197,26 @@ class MercadoLivreService
     }
 
     /**
+     * Envia uma resposta numa conversa existente. `$counterpartId` é o
+     * usuário do outro lado da conversa (quem não somos nós) — vem de uma
+     * mensagem já sincronizada dessa conversa, não tem como descobrir do
+     * zero sem isso.
+     */
+    public function sendMessage(Account $account, string $packId, string $counterpartId, string $text): void
+    {
+        $response = $this->authorizedRequest($account)->post(
+            config('services.mercadolivre.api_url')."/messages/packs/{$packId}/sellers/{$account->mercadolivre_user_id}?tag=post_sale",
+            [
+                'from' => ['user_id' => (string) $account->mercadolivre_user_id],
+                'to' => ['user_id' => $counterpartId],
+                'text' => $text,
+            ],
+        );
+
+        $this->assertSuccessful($response, 'Falha ao enviar a mensagem no Mercado Livre');
+    }
+
+    /**
      * A data de liberação do dinheiro (`money_release_date`) só vem no recurso
      * completo do pagamento, não no resumo embutido no pedido — é preciso uma
      * chamada por pagamento (endpoint legado `/collections/{id}`; o endpoint

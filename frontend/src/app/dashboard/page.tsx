@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useDashboard } from "@/hooks/useDashboard";
@@ -180,11 +181,17 @@ function DashboardContent() {
 
           {dashboard && dashboard.alerts.length > 0 && (
             <div className={styles.alerts}>
-              {dashboard.alerts.map((alert, i) => (
-                <div key={i} className={styles.alert}>
-                  {alert.message}
-                </div>
-              ))}
+              {dashboard.alerts.map((alert, i) =>
+                alert.type === "unread_messages" ? (
+                  <Link key={i} href="/messages" className={styles.alert}>
+                    {alert.message}
+                  </Link>
+                ) : (
+                  <div key={i} className={styles.alert}>
+                    {alert.message}
+                  </div>
+                ),
+              )}
             </div>
           )}
 

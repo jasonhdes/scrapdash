@@ -53,16 +53,23 @@ class SyncMessagesJob implements ShouldQueue
                 }
 
                 foreach ($messages as $messageData) {
+                    $fromId = $messageData['from']['user_id'] ?? null;
+                    $toId = $messageData['to']['user_id'] ?? null;
+                    $isSent = $fromId == $this->account->mercadolivre_user_id;
+
                     Message::updateOrCreate(
                         ['mercadolivre_message_id' => (string) $messageData['id']],
                         [
                             'account_id' => $this->account->id,
                             'order_id' => $order->id,
-                            'direction' => ($messageData['from']['user_id'] ?? null) == $this->account->mercadolivre_user_id
-                                ? 'sent'
-                                : 'received',
+                            'direction' => $isSent ? 'sent' : 'received',
+                            // Quem não somos nós nessa conversa — precisa pra responder
+                            // (a API de envio pede o `to.user_id` explicitamente).
+                            'counterpart_id' => $isSent ? $toId : $fromId,
                             'text' => $messageData['text']['plain'] ?? $messageData['text'] ?? null,
                             'status' => $messageData['status'] ?? null,
+                            'sent_at' => $messageData['message_date']['received'] ?? $messageData['message_date']['created'] ?? null,
+                            'read_at' => $messageData['message_date']['read'] ?? null,
                             'synced_at' => now(),
                         ],
                     );
