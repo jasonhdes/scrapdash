@@ -17,12 +17,17 @@ class Message extends Model
         'direction',
         'text',
         'status',
+        'sent_at',
+        'read_at',
+        'counterpart_id',
         'synced_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'sent_at' => 'datetime',
+            'read_at' => 'datetime',
             'synced_at' => 'datetime',
         ];
     }

@@ -124,6 +124,20 @@ class DashboardService
     {
         $alerts = [];
 
+        $unreadMessages = Message::where('account_id', $account->id)
+            ->where('direction', 'received')
+            ->whereNull('read_at')
+            ->count();
+
+        if ($unreadMessages > 0) {
+            $alerts[] = [
+                'type' => 'unread_messages',
+                'message' => $unreadMessages === 1
+                    ? '1 mensagem não lida.'
+                    : "{$unreadMessages} mensagens não lidas.",
+            ];
+        }
+
         if (! $account->isConnectedToMercadoLivre()) {
             $alerts[] = [
                 'type' => 'not_connected',

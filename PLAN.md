@@ -150,11 +150,11 @@ scrapdash-app/
 
 ## Sprint 8 — Mensagens
 
-- [ ] Importação e listagem de mensagens (perguntas/pós-venda) do Mercado Livre.
-- [ ] Interface de resposta às mensagens (se a API permitir via integração).
-- [ ] Notificações de novas mensagens.
+- [X] Importação e listagem de mensagens (perguntas/pós-venda) do Mercado Livre — a sincronização (`SyncMessagesJob`) já existia desde o Sprint 4/5, mas só guardava `synced_at` (quando *nós* buscamos), não a data real da mensagem. Adicionadas `sent_at`/`read_at` (de `message_date.received`/`message_date.read` na API do ML — mesma categoria de bug já corrigida antes pra `ordered_at`/`paid_at`) e `counterpart_id` (usuário do outro lado da conversa, necessário pra responder). `GET /api/accounts/{account}/messages` lista conversas (agrupadas por pedido/pack, com última mensagem e contagem de não lidas) e `GET .../orders/{order}/messages` traz a thread completa. Pedidos que fazem parte do mesmo pack compartilham conversa mas as mensagens só ficam salvas sob o `order_id` de um pedido "representante" — resolvido buscando todos os pedidos do mesmo pack antes de consultar, validado abrindo a conversa por um pedido que não tinha mensagem própria e confirmando que as 6 mensagens do pedido-irmão apareceram.
+- [X] Interface de resposta às mensagens — `POST .../orders/{order}/messages`, envia via `MercadoLivreService::sendMessage` (mesmo endpoint de leitura, `POST /messages/packs/{pack_id}/sellers/{seller_id}`) usando o `counterpart_id` da mensagem mais recente da conversa. **Não testado enviando uma mensagem de verdade** — isso mandaria uma mensagem real pra um comprador real, então implementei com base na simetria do endpoint de leitura (mesma URL, verbo POST, corpo espelhando o formato `from`/`to`/`text` da resposta) mas não validei contra a API ao vivo. Testar com cuidado antes de confiar no fluxo de envio em produção.
+- [X] Notificações de novas mensagens — badge de não lidas no `NavBar` (recalculado a cada 30s, mesmo padrão de polling do dashboard) e alerta clicável no dashboard (`GET /accounts/{account}/dashboard`, novo tipo de alerta `unread_messages`) levando direto pra `/messages`. Validado com dados reais: 10 mensagens não lidas de fato pendentes na conta.
 
-**Entregável:** central de mensagens integrada.
+**Entregável:** central de mensagens integrada. ✅ Validado com dados reais (244 mensagens, 50 conversas, 10 não lidas) — envio de resposta implementado mas não testado ao vivo (ver nota acima).
 
 ---
 
