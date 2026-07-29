@@ -10,7 +10,7 @@ class AccountController extends Controller
 {
     public function index(): AnonymousResourceCollection
     {
-        $accounts = Auth::guard('api')->user()->accounts;
+        $accounts = Auth::guard('api')->user()->accessibleAccounts();
 
         return AccountResource::collection($accounts);
     }

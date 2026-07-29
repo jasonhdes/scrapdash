@@ -14,7 +14,7 @@ class ProductController extends Controller
 {
     public function index(Request $request, Account $account): AnonymousResourceCollection
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'products']);
 
         $products = Product::where('account_id', $account->id)
             ->when($request->string('status')->isNotEmpty(), fn ($q) => $q->where('status', $request->string('status')))
@@ -27,7 +27,7 @@ class ProductController extends Controller
 
     public function show(Account $account, Product $product): ProductResource
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'products']);
 
         abort_if($product->account_id !== $account->id, 404);
 

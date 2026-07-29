@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Application\Services\AuditLogger;
 use App\Http\Resources\MessageResource;
 use App\Infrastructure\MercadoLivre\MercadoLivreService;
 use App\Models\Account;
@@ -16,7 +17,7 @@ class MessageController extends Controller
 {
     public function index(Account $account): JsonResponse
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'messages']);
 
         $orders = Order::where('account_id', $account->id)
             ->whereHas('messages')
@@ -42,7 +43,7 @@ class MessageController extends Controller
 
     public function show(Account $account, Order $order): JsonResponse
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('view', $account);
+        Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'messages']);
 
         abort_if($order->account_id !== $account->id, 404);
 
@@ -64,7 +65,8 @@ class MessageController extends Controller
 
     public function reply(Request $request, Account $account, Order $order, MercadoLivreService $mercadoLivre): JsonResponse
     {
-        Gate::forUser(Auth::guard('api')->user())->authorize('update', $account);
+        $actor = Auth::guard('api')->user();
+        Gate::forUser($actor)->authorize('manageModule', [$account, 'messages']);
 
         abort_if($order->account_id !== $account->id, 404);
 
@@ -97,6 +99,8 @@ class MessageController extends Controller
             'sent_at' => now(),
             'synced_at' => now(),
         ]);
+
+        AuditLogger::log($actor, 'message.replied', $account, $order, ['message_id' => $message->id]);
 
         return response()->json(['data' => new MessageResource($message)], 201);
     }

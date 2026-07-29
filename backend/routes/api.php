@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\FinancialController;
 use App\Http\Controllers\MercadoLivre\MercadoLivreAuthController;
 use App\Http\Controllers\MessageController;
@@ -45,4 +46,9 @@ Route::middleware('auth:api')->group(function () {
     Route::get('accounts/{account}/payments', [PaymentController::class, 'index']);
     Route::get('accounts/{account}/financial/summary', [FinancialController::class, 'summary']);
     Route::get('accounts/{account}/financial/reconciliation', [FinancialController::class, 'reconciliation']);
+
+    Route::get('accounts/{account}/employees', [EmployeeController::class, 'index']);
+    Route::post('accounts/{account}/employees', [EmployeeController::class, 'store']);
+    Route::patch('accounts/{account}/employees/{employee}', [EmployeeController::class, 'update']);
+    Route::delete('accounts/{account}/employees/{employee}', [EmployeeController::class, 'destroy']);
 });

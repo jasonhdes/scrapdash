@@ -2,30 +2,36 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Employee extends Model
+class AuditLog extends Model
 {
-    use HasFactory;
+    public const UPDATED_AT = null;
 
     protected $fillable = [
+        'user_id',
         'account_id',
-        'name',
-        'email',
-        'password',
-    ];
-
-    protected $hidden = [
-        'password',
+        'action',
+        'subject_type',
+        'subject_id',
+        'meta',
     ];
 
     protected function casts(): array
     {
         return [
-            'password' => 'hashed',
+            'meta' => 'array',
+            'created_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**
