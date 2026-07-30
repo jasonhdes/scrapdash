@@ -60,9 +60,10 @@ Separada das demais telas de dados porque envolve trabalho novo de verdade (não
 
 ## Fase 2 — Produtos, Pedidos e Financeiro
 
-- [ ] Produtos/Pedidos/Financeiro — tabelas seguindo `tables.html`/`table-01.html`/`table-02.html` do template, reaproveitando paginação, filtros e ordenação por coluna já existentes (só troca a casca visual, não a lógica).
-- [ ] Detalhe do pedido (`orders/[id]`) — cards + tabela de itens/pagamentos no mesmo padrão.
-- [ ] Verificar: `tsc`/`lint`/`test`/`build` limpos + QA manual no navegador (claro/escuro) de cada tela.
+- [X] Produtos/Pedidos/Financeiro — tabelas reskinadas no padrão TailAdmin, reaproveitando paginação, filtros e ordenação por coluna já existentes.
+- [X] Detalhe do pedido (`orders/[id]`) — cards + tabelas de itens/pagamentos no mesmo padrão.
+- [X] Novo `StatusBadge` compartilhado (cor semântica por status) e `Pagination` reskinado.
+- [X] Verificar: `tsc`/`lint`/`test`/`build` limpos. **QA manual no navegador ainda não feito** (sem ferramenta de screenshot nesta sessão) — validado via `curl` contra o dev server (rotas respondendo 200, classes novas compiladas no CSS) com dados reais.
 
 ## Fase 3 — Telas restantes
 

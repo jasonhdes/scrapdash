@@ -7,7 +7,7 @@ import { listProducts } from '@/services/products';
 import type { Product } from '@/types/product';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
 import { Pagination } from '@/components/shared/Pagination';
-import styles from '@/styles/list.module.css';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos os status' },
@@ -16,6 +16,9 @@ const STATUS_OPTIONS = [
   { value: 'under_review', label: 'Em revisão' },
   { value: 'inactive', label: 'Inativo' },
 ];
+
+const inputClass =
+  'rounded-lg border border-stroke bg-transparent px-4 py-2 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
 
 function formatCurrency(value: number, currency: string | null) {
   return new Intl.NumberFormat('pt-BR', {
@@ -62,11 +65,13 @@ export default function ProductsPage() {
   }, [loadProducts]);
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className={styles.title}>Produtos</h1>
-          <p className={styles.subtitle}>Anúncios sincronizados do Mercado Livre.</p>
+          <h1 className="text-title-md font-bold text-black dark:text-white">Produtos</h1>
+          <p className="mt-1 text-sm text-body dark:text-bodydark">
+            Anúncios sincronizados do Mercado Livre.
+          </p>
         </div>
         <AccountSelector
           accounts={accounts}
@@ -75,19 +80,24 @@ export default function ProductsPage() {
         />
       </div>
 
-      <div className={styles.filters}>
-        <div className={styles.field}>
-          <label htmlFor="search">Buscar</label>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="search" className="text-sm font-medium text-black dark:text-white">
+            Buscar
+          </label>
           <input
             id="search"
             type="text"
             placeholder="Título do produto"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
+            className={inputClass}
           />
         </div>
-        <div className={styles.field}>
-          <label htmlFor="status">Status</label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="status" className="text-sm font-medium text-black dark:text-white">
+            Status
+          </label>
           <select
             id="status"
             value={status}
@@ -95,6 +105,7 @@ export default function ProductsPage() {
               setStatus(e.target.value);
               setPage(1);
             }}
+            className={inputClass}
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -106,46 +117,56 @@ export default function ProductsPage() {
       </div>
 
       {isLoading && products.length === 0 ? (
-        <p className={styles.subtitle}>Carregando produtos...</p>
+        <p className="text-sm text-body dark:text-bodydark">Carregando produtos...</p>
       ) : products.length === 0 ? (
-        <p className={styles.subtitle}>Nenhum produto encontrado.</p>
+        <p className="text-sm text-body dark:text-bodydark">Nenhum produto encontrado.</p>
       ) : (
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
+        <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
+          <table className="w-full table-auto">
             <thead>
-              <tr>
-                <th></th>
-                <th>Nome</th>
-                <th>SKU</th>
-                <th>Preço</th>
-                <th>Estoque</th>
-                <th>Status</th>
+              <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                <th className="w-16 px-4 py-4"></th>
+                <th className="px-4 py-4 font-medium text-black dark:text-white">Nome</th>
+                <th className="px-4 py-4 font-medium text-black dark:text-white">SKU</th>
+                <th className="px-4 py-4 font-medium text-black dark:text-white">Preço</th>
+                <th className="px-4 py-4 font-medium text-black dark:text-white">Estoque</th>
+                <th className="px-4 py-4 font-medium text-black dark:text-white">Status</th>
               </tr>
             </thead>
             <tbody>
               {products.map((product) => (
                 <tr key={product.id}>
-                  <td>
+                  <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
                     {product.thumbnail && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={product.thumbnail} alt="" className={styles.thumb} />
+                      <img
+                        src={product.thumbnail}
+                        alt=""
+                        className="h-10 w-10 rounded object-cover"
+                      />
                     )}
                   </td>
-                  <td>
+                  <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
                     <a
                       href={product.permalink ?? '#'}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={styles.link}
+                      className="font-medium text-black hover:text-primary dark:text-white"
                     >
                       {product.title}
                     </a>
                   </td>
-                  <td>{product.seller_sku ?? '—'}</td>
-                  <td>{formatCurrency(product.price, product.currency)}</td>
-                  <td>{product.available_quantity}</td>
-                  <td>
-                    <span className={styles.badge}>{product.status}</span>
+                  <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                    {product.seller_sku ?? '—'}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                    {formatCurrency(product.price, product.currency)}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                    {product.available_quantity}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
+                    <StatusBadge status={product.status} />
                   </td>
                 </tr>
               ))}
