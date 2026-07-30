@@ -1,4 +1,15 @@
-@import "../styles/colors.css";
+@import 'tailwindcss';
+@import '../styles/colors.css';
+
+/*
+ * Dark mode do Tailwind (classe `dark` na tag <html>, controlada pelo
+ * toggle manual — ver useTheme/ThemeToggle) em vez do padrão do v4
+ * (`prefers-color-scheme`). Só afeta classes `dark:` do Tailwind, ou
+ * seja, só as telas já migradas — as telas com CSS Module antigo
+ * continuam reagindo à preferência do sistema operacional até serem
+ * migradas (Sprints 2 a 4 do PLAN_FRONT.md).
+ */
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: var(--color01);
@@ -48,4 +59,8 @@ a {
   html {
     color-scheme: dark;
   }
+}
+
+html.dark {
+  color-scheme: dark;
 }
