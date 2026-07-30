@@ -67,15 +67,15 @@ Separada das demais telas de dados porque envolve trabalho novo de verdade (não
 
 ## Fase 3 — Telas restantes
 
-- [ ] Mensagens — adaptar `inbox.html`/`messages.html` do template pro layout de duas colunas (lista de conversas + thread) já existente — maior esforço de adaptação, sem equivalente 1:1 no template.
-- [ ] Funcionários — grade de permissões construída a partir dos primitivos de formulário/tabela/badge do template (`form-elements.html`, `badge.html`) — sem equivalente direto no template.
-- [ ] Verificar: `tsc`/`lint`/`test`/`build` limpos + QA manual no navegador de cada tela.
+- [X] Mensagens — layout de duas colunas reskinado (sem equivalente 1:1 no template), lógica intacta.
+- [X] Funcionários — formulário, cards e `PermissionGrid` reskinados, preservando a estrutura testada por `PermissionGrid.test.tsx`.
+- [X] Verificar: `tsc`/`lint`/`test`/`build` limpos. **QA manual no navegador ainda não feito** (sem ferramenta de screenshot nesta sessão) — validado via `curl` contra o dev server com dados reais.
 
 ## Fase 4 — Limpeza e verificação final
 
-- [ ] Remover todos os `.module.css` não usados (`auth`, `dashboard`, `list`, `session`, `messages`, `nav`, `employees`) e o `colors.css` antigo.
-- [ ] Atualizar `docs/Arquitetura.md` (seção "Frontend — organização de pastas") pra refletir Tailwind no lugar de CSS Modules.
-- [ ] Rodar a suíte completa (`tsc`, `lint`, `test`, `build`) uma última vez; conferir se algum teste de componente (`PermissionGrid.test.tsx`, etc.) precisou de ajuste por mudança de markup.
-- [ ] QA manual final: cada tela, claro e escuro, larguras mobile (ganho real sobre o layout atual, que não foi pensado pra mobile).
+- [X] Removidos todos os `.module.css` (`auth`, `dashboard`, `list`, `session`, `messages`, `nav`, `employees`) e `NavBar.tsx` (morto desde a Fase 0). Precisou terminar de reskinar dashboard (casca), `SessionGuard` e a landing `/`, que ainda não tinham sido tocados em nenhuma fase anterior. `colors.css` ficou só com a paleta TailAdmin.
+- [X] `docs/Arquitetura.md` atualizado. Menções ao `NavBar` corrigidas pra `Sidebar` em `CasosDeUso.md`/`Fluxos.md`/`Permissoes.md`.
+- [X] Suíte completa limpa; `PermissionGrid.test.tsx` não precisou de ajuste.
+- [X] QA via `curl`: as 10 rotas respondendo 200 com dados reais, paleta nova compilando, nenhum `--colorNN` antigo sobrando. **QA em navegador de verdade ainda pendente** (sem ferramenta de screenshot em nenhuma sprint desta sessão).
 
 **Entregável:** frontend com o mesmo comportamento/funcionalidade de hoje (mais gráficos/mapa no dashboard), visual TailAdmin (Tailwind CSS) em vez de CSS Modules, responsivo.

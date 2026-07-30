@@ -35,12 +35,12 @@ Organizado por persona. "Pode" aqui já reflete a aplicação real das permissõ
 1. Dono acessa `/employees`, cria um funcionário com nome/e-mail/senha.
 2. Marca só `messages: [view, manage]` na grade de permissões (deixa produtos/pedidos/financeiro sem nenhuma marcação).
 3. Funcionário loga com o e-mail/senha que o dono definiu.
-4. `NavBar` do funcionário mostra só "Dashboard" e "Mensagens" — os outros links somem porque `permissions` não inclui `view` neles.
+4. `Sidebar` do funcionário mostra só "Dashboard" e "Mensagens" — os outros links somem porque `permissions` não inclui `view` neles.
 5. Funcionário responde mensagens normalmente; tentativa de acessar `/financial` diretamente (URL manual) recebe 403 do backend.
 
 ## Fluxo típico: comprador pergunta sobre um produto
 
 1. `SyncMessagesJob` traz a pergunta na próxima janela de sincronização (até 15min de atraso).
-2. Aparece como não lida no badge do `NavBar` e como alerta clicável no dashboard.
+2. Aparece como não lida no badge do `Sidebar` e como alerta clicável no dashboard.
 3. Vendedor (ou funcionário com permissão) abre `/messages`, vê a conversa, responde.
 4. Resposta é enviada de volta pro Mercado Livre em tempo real (chamada síncrona, não passa pela fila).

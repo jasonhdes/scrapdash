@@ -1,10 +1,12 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import type { ReactNode } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useTokenExpiry } from "@/hooks/useTokenExpiry";
-import styles from "@/styles/session.module.css";
+import { useState } from 'react';
+import type { ReactNode } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useTokenExpiry } from '@/hooks/useTokenExpiry';
+
+const buttonClass =
+  'rounded-lg bg-primary px-3.5 py-1.5 text-sm font-medium text-white disabled:opacity-60';
 
 export function SessionGuard({ children }: { children: ReactNode }) {
   const { token, refreshSession } = useAuth();
@@ -22,23 +24,23 @@ export function SessionGuard({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {status === "expiring" && (
-        <div className={styles.alerts}>
-          <div className={styles.alert}>
+      {status === 'expiring' && (
+        <div className="mb-4 flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2.5 rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-black dark:text-white">
             Sua sessão vai expirar em breve.
-            <button className={styles.button} disabled={isRefreshing} onClick={handleRefresh}>
-              {isRefreshing ? "Atualizando..." : "Atualizar"}
+            <button disabled={isRefreshing} onClick={handleRefresh} className={buttonClass}>
+              {isRefreshing ? 'Atualizando...' : 'Atualizar'}
             </button>
           </div>
         </div>
       )}
 
-      {status === "expired" ? (
-        <div className={styles.blurWrapper}>
-          <div className={styles.blurredContent}>{children}</div>
-          <div className={styles.blurOverlay}>
-            <button className={styles.button} disabled={isRefreshing} onClick={handleRefresh}>
-              {isRefreshing ? "Atualizando..." : "Atualizar"}
+      {status === 'expired' ? (
+        <div className="relative">
+          <div className="pointer-events-none blur-md select-none">{children}</div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <button disabled={isRefreshing} onClick={handleRefresh} className={buttonClass}>
+              {isRefreshing ? 'Atualizando...' : 'Atualizar'}
             </button>
           </div>
         </div>

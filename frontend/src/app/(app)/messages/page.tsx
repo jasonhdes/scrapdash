@@ -9,8 +9,6 @@ import { getConversation, replyToConversation } from '@/services/messages';
 import type { ConversationThread } from '@/types/message';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
 import { BRASILIA_TIMEZONE } from '@/utils/format';
-import listStyles from '@/styles/list.module.css';
-import styles from '@/styles/messages.module.css';
 
 function formatDateTime(value: string | null) {
   if (!value) return '';
@@ -70,11 +68,11 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className={listStyles.container}>
-      <div className={listStyles.header}>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className={listStyles.title}>Mensagens</h1>
-          <p className={listStyles.subtitle}>
+          <h1 className="text-title-md font-bold text-black dark:text-white">Mensagens</h1>
+          <p className="mt-1 text-sm text-body dark:text-bodydark">
             Perguntas e conversas de pós-venda do Mercado Livre.
           </p>
         </div>
@@ -85,32 +83,30 @@ export default function MessagesPage() {
         />
       </div>
 
-      <div className={styles.layout}>
-        <div className={styles.conversationList}>
+      <div className="grid grid-cols-1 overflow-hidden rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark md:h-[600px] md:grid-cols-[300px_1fr]">
+        <div className="flex flex-col overflow-y-auto border-b border-stroke dark:border-strokedark md:border-b-0 md:border-r">
           {conversationsLoading && conversations.length === 0 ? (
-            <p className={listStyles.subtitle} style={{ padding: 14 }}>
-              Carregando conversas...
-            </p>
+            <p className="p-4 text-sm text-body dark:text-bodydark">Carregando conversas...</p>
           ) : conversations.length === 0 ? (
-            <p className={listStyles.subtitle} style={{ padding: 14 }}>
-              Nenhuma conversa encontrada.
-            </p>
+            <p className="p-4 text-sm text-body dark:text-bodydark">Nenhuma conversa encontrada.</p>
           ) : (
             conversations.map((conversation) => (
               <button
                 key={conversation.order_id}
-                className={`${styles.conversationItem} ${
-                  selectedOrderId === conversation.order_id ? styles.conversationItemActive : ''
-                }`}
                 onClick={() => openConversation(conversation.order_id)}
+                className={`flex flex-col gap-0.5 border-b border-stroke px-4 py-3 text-left hover:bg-gray-2 dark:border-strokedark dark:hover:bg-meta-4 ${
+                  selectedOrderId === conversation.order_id ? 'bg-gray-2 dark:bg-meta-4' : ''
+                }`}
               >
-                <div className={styles.conversationTop}>
-                  <span className={styles.conversationBuyer}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-black dark:text-white">
                     {conversation.buyer_nickname ?? '—'}
                   </span>
-                  {conversation.unread_count > 0 && <span className={styles.unreadDot} />}
+                  {conversation.unread_count > 0 && (
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-primary" />
+                  )}
                 </div>
-                <span className={styles.conversationPreview}>
+                <span className="truncate text-sm text-body dark:text-bodydark">
                   {conversation.last_message?.direction === 'sent' ? 'Você: ' : ''}
                   {conversation.last_message?.text ?? '—'}
                 </span>
@@ -119,46 +115,56 @@ export default function MessagesPage() {
           )}
         </div>
 
-        <div className={styles.thread}>
+        <div className="flex min-h-0 flex-col">
           {!selectedOrderId ? (
-            <div className={styles.empty}>Selecione uma conversa à esquerda.</div>
+            <div className="flex h-full items-center justify-center p-10 text-sm text-body dark:text-bodydark">
+              Selecione uma conversa à esquerda.
+            </div>
           ) : threadLoading || !thread ? (
-            <div className={styles.empty}>Carregando conversa...</div>
+            <div className="flex h-full items-center justify-center p-10 text-sm text-body dark:text-bodydark">
+              Carregando conversa...
+            </div>
           ) : (
             <>
-              <div className={styles.threadHeader}>
+              <div className="border-b border-stroke px-4 py-3 font-medium text-black dark:border-strokedark dark:text-white">
                 {thread.order.buyer_nickname ?? '—'} ·{' '}
-                <Link href={`/orders/${thread.order.id}`} className={listStyles.link}>
+                <Link href={`/orders/${thread.order.id}`} className="font-medium text-primary">
                   Pedido {thread.order.mercadolivre_order_id}
                 </Link>
               </div>
 
-              <div className={styles.threadMessages}>
+              <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto p-4">
                 {thread.messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`${styles.bubble} ${
-                      message.direction === 'sent' ? styles.bubbleSent : styles.bubbleReceived
+                    className={`max-w-[70%] rounded-xl px-3 py-2 text-sm ${
+                      message.direction === 'sent'
+                        ? 'self-end bg-primary text-white'
+                        : 'self-start bg-gray-2 text-black dark:bg-meta-4 dark:text-white'
                     }`}
                   >
                     <div>{message.text}</div>
-                    <div className={styles.bubbleMeta}>{formatDateTime(message.sent_at)}</div>
+                    <div className="mt-1 text-xs opacity-70">{formatDateTime(message.sent_at)}</div>
                   </div>
                 ))}
               </div>
 
-              <form className={styles.replyForm} onSubmit={handleReply}>
+              <form
+                onSubmit={handleReply}
+                className="flex gap-2 border-t border-stroke p-4 dark:border-strokedark"
+              >
                 <textarea
                   rows={2}
                   placeholder="Escreva uma resposta..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   disabled={isSending}
+                  className="flex-1 resize-none rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
                 />
                 <button
                   type="submit"
-                  className={listStyles.pageButton}
                   disabled={isSending || !replyText.trim()}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
                 >
                   {isSending ? 'Enviando...' : 'Enviar'}
                 </button>
@@ -168,7 +174,7 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      {error && <p className={listStyles.subtitle}>{error}</p>}
+      {error && <p className="text-sm text-danger">{error}</p>}
     </div>
   );
 }
