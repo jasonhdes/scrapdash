@@ -10,8 +10,8 @@ import type { Order } from '@/types/order';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
 import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { Pagination } from '@/components/shared/Pagination';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { BRASILIA_TIMEZONE, formatReleaseDate } from '@/utils/format';
-import styles from '@/styles/list.module.css';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos os status' },
@@ -40,6 +40,11 @@ const EMPTY_TEXT_FILTERS = {
   minTotal: '',
   maxTotal: '',
 };
+
+const inputClass =
+  'rounded-lg border border-stroke bg-transparent px-4 py-2 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
+const buttonClass =
+  'rounded-lg border border-stroke px-4 py-2 text-sm font-medium text-black dark:border-strokedark dark:text-white';
 
 function formatCurrency(value: number, currency: string | null) {
   return new Intl.NumberFormat('pt-BR', {
@@ -193,11 +198,13 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className={styles.title}>Pedidos</h1>
-          <p className={styles.subtitle}>Pedidos sincronizados do Mercado Livre.</p>
+          <h1 className="text-title-md font-bold text-black dark:text-white">Pedidos</h1>
+          <p className="mt-1 text-sm text-body dark:text-bodydark">
+            Pedidos sincronizados do Mercado Livre.
+          </p>
         </div>
         <AccountSelector
           accounts={accounts}
@@ -206,59 +213,73 @@ export default function OrdersPage() {
         />
       </div>
 
-      <div className={styles.filters}>
-        <div className={styles.field}>
-          <label htmlFor="order_number">Pedido</label>
+      <div className="flex flex-wrap items-end gap-3 rounded-sm border border-stroke bg-white p-4 shadow-1 dark:border-strokedark dark:bg-boxdark">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="order_number" className="text-sm font-medium text-black dark:text-white">
+            Pedido
+          </label>
           <input
             id="order_number"
             type="text"
             placeholder="Número do pedido"
             value={textFiltersInput.orderNumber}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, orderNumber: e.target.value }))}
+            className={inputClass}
           />
         </div>
-        <div className={styles.field}>
-          <label htmlFor="buyer">Comprador</label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="buyer" className="text-sm font-medium text-black dark:text-white">
+            Comprador
+          </label>
           <input
             id="buyer"
             type="text"
             placeholder="Apelido do comprador"
             value={textFiltersInput.buyer}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, buyer: e.target.value }))}
+            className={inputClass}
           />
         </div>
-        <div className={styles.field}>
-          <label htmlFor="location">Cidade/Estado</label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="location" className="text-sm font-medium text-black dark:text-white">
+            Cidade/Estado
+          </label>
           <input
             id="location"
             type="text"
             placeholder="Ex.: São Paulo"
             value={textFiltersInput.location}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, location: e.target.value }))}
+            className={inputClass}
           />
         </div>
-        <div className={styles.field}>
-          <label htmlFor="product">Produto</label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="product" className="text-sm font-medium text-black dark:text-white">
+            Produto
+          </label>
           <input
             id="product"
             type="text"
             placeholder="Nome do produto"
             value={textFiltersInput.product}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, product: e.target.value }))}
+            className={inputClass}
           />
         </div>
-        <div className={styles.field}>
-          <label htmlFor="skus">SKU (selecione um ou mais)</label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="skus" className="text-sm font-medium text-black dark:text-white">
+            SKU (selecione um ou mais)
+          </label>
           <select
             id="skus"
             multiple
             size={4}
-            className={styles.skuSelect}
             value={selectedSkus}
             onChange={(e) => {
               setSelectedSkus(Array.from(e.target.selectedOptions, (o) => o.value));
               setPage(1);
             }}
+            className={`${inputClass} min-w-48`}
           >
             {skuOptions.map((option) => (
               <option key={option.sku} value={option.sku}>
@@ -267,8 +288,10 @@ export default function OrdersPage() {
             ))}
           </select>
         </div>
-        <div className={styles.field}>
-          <label htmlFor="min_total">Valor mín.</label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="min_total" className="text-sm font-medium text-black dark:text-white">
+            Valor mín.
+          </label>
           <input
             id="min_total"
             type="number"
@@ -277,10 +300,13 @@ export default function OrdersPage() {
             placeholder="0,00"
             value={textFiltersInput.minTotal}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, minTotal: e.target.value }))}
+            className={inputClass}
           />
         </div>
-        <div className={styles.field}>
-          <label htmlFor="max_total">Valor máx.</label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="max_total" className="text-sm font-medium text-black dark:text-white">
+            Valor máx.
+          </label>
           <input
             id="max_total"
             type="number"
@@ -289,10 +315,13 @@ export default function OrdersPage() {
             placeholder="0,00"
             value={textFiltersInput.maxTotal}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, maxTotal: e.target.value }))}
+            className={inputClass}
           />
         </div>
-        <div className={styles.field}>
-          <label htmlFor="status">Status</label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="status" className="text-sm font-medium text-black dark:text-white">
+            Status
+          </label>
           <select
             id="status"
             value={status}
@@ -300,6 +329,7 @@ export default function OrdersPage() {
               setStatus(e.target.value);
               setPage(1);
             }}
+            className={inputClass}
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -308,8 +338,10 @@ export default function OrdersPage() {
             ))}
           </select>
         </div>
-        <div className={styles.field}>
-          <label htmlFor="released">Liberação</label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="released" className="text-sm font-medium text-black dark:text-white">
+            Liberação
+          </label>
           <select
             id="released"
             value={released}
@@ -317,6 +349,7 @@ export default function OrdersPage() {
               setReleased(e.target.value);
               setPage(1);
             }}
+            className={inputClass}
           >
             {RELEASED_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -325,8 +358,10 @@ export default function OrdersPage() {
             ))}
           </select>
         </div>
-        <div className={styles.field}>
-          <label htmlFor="processed">Processamento</label>
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="processed" className="text-sm font-medium text-black dark:text-white">
+            Processamento
+          </label>
           <select
             id="processed"
             value={processed}
@@ -334,6 +369,7 @@ export default function OrdersPage() {
               setProcessed(e.target.value);
               setPage(1);
             }}
+            className={inputClass}
           >
             {PROCESSED_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -356,61 +392,80 @@ export default function OrdersPage() {
             setPage(1);
           }}
         />
-        <button className={styles.pageButton} onClick={clearFilters}>
+        <button onClick={clearFilters} className={buttonClass}>
           Limpar filtros
         </button>
-        <button className={styles.pageButton} disabled={isExporting} onClick={handleExport}>
+        <button disabled={isExporting} onClick={handleExport} className={buttonClass}>
           {isExporting ? 'Exportando...' : 'Exportar CSV'}
         </button>
       </div>
 
       {isLoading && orders.length === 0 ? (
-        <p className={styles.subtitle}>Carregando pedidos...</p>
+        <p className="text-sm text-body dark:text-bodydark">Carregando pedidos...</p>
       ) : orders.length === 0 ? (
-        <p className={styles.subtitle}>Nenhum pedido encontrado.</p>
+        <p className="text-sm text-body dark:text-bodydark">Nenhum pedido encontrado.</p>
       ) : (
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
+        <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
+          <table className="w-full table-auto">
             <thead>
-              <tr>
+              <tr className="bg-gray-2 text-left dark:bg-meta-4">
                 <th
-                  className={styles.sortableTh}
+                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
                   onClick={() => handleSort('mercadolivre_order_id')}
                 >
                   Pedido{sortIndicator('mercadolivre_order_id')}
                 </th>
-                <th className={styles.sortableTh} onClick={() => handleSort('buyer_nickname')}>
+                <th
+                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
+                  onClick={() => handleSort('buyer_nickname')}
+                >
                   Comprador{sortIndicator('buyer_nickname')}
                 </th>
-                <th>Cidade/Estado</th>
-                <th>Produtos</th>
-                <th className={styles.sortableTh} onClick={() => handleSort('total_amount')}>
+                <th className="px-4 py-4 font-medium text-black dark:text-white">Cidade/Estado</th>
+                <th className="px-4 py-4 font-medium text-black dark:text-white">Produtos</th>
+                <th
+                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
+                  onClick={() => handleSort('total_amount')}
+                >
                   Valor{sortIndicator('total_amount')}
                 </th>
-                <th className={styles.sortableTh} onClick={() => handleSort('status')}>
+                <th
+                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
+                  onClick={() => handleSort('status')}
+                >
                   Status{sortIndicator('status')}
                 </th>
-                <th className={styles.sortableTh} onClick={() => handleSort('ordered_at')}>
+                <th
+                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
+                  onClick={() => handleSort('ordered_at')}
+                >
                   Data{sortIndicator('ordered_at')}
                 </th>
-                <th className={styles.sortableTh} onClick={() => handleSort('money_release_date')}>
+                <th
+                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
+                  onClick={() => handleSort('money_release_date')}
+                >
                   Liberação{sortIndicator('money_release_date')}
                 </th>
-                <th>Processado</th>
-                <th></th>
+                <th className="px-4 py-4 font-medium text-black dark:text-white">Processado</th>
+                <th className="px-4 py-4"></th>
               </tr>
             </thead>
             <tbody>
               {orders.map((order) => (
                 <tr key={order.id}>
-                  <td>
-                    <Link href={`/orders/${order.id}`} className={styles.link}>
+                  <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
+                    <Link href={`/orders/${order.id}`} className="font-medium text-primary">
                       {order.mercadolivre_order_id}
                     </Link>
                   </td>
-                  <td>{order.buyer_nickname ?? '—'}</td>
-                  <td>{formatLocation(order.buyer_city, order.buyer_state)}</td>
-                  <td className={styles.productList}>
+                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                    {order.buyer_nickname ?? '—'}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                    {formatLocation(order.buyer_city, order.buyer_state)}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-sm text-body dark:border-strokedark dark:text-bodydark">
                     {order.items && order.items.length > 0
                       ? order.items.map((item) => (
                           <div key={item.id}>
@@ -420,18 +475,26 @@ export default function OrdersPage() {
                         ))
                       : '—'}
                   </td>
-                  <td>{formatCurrency(order.total_amount, order.currency)}</td>
-                  <td>
-                    <span className={styles.badge}>{order.status}</span>
+                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                    {formatCurrency(order.total_amount, order.currency)}
                   </td>
-                  <td>{formatDate(order.ordered_at)}</td>
-                  <td>{formatReleaseDate(order.money_release_date, order.money_released)}</td>
-                  <td>{order.processed_at ? 'Sim' : 'Não'}</td>
-                  <td>
+                  <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
+                    <StatusBadge status={order.status} />
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                    {formatDate(order.ordered_at)}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                    {formatReleaseDate(order.money_release_date, order.money_released)}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                    {order.processed_at ? 'Sim' : 'Não'}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
                     <button
-                      className={styles.pageButton}
                       disabled={updatingId === order.id}
                       onClick={() => handleToggleProcessed(order)}
+                      className={buttonClass}
                     >
                       {order.processed_at ? 'Desmarcar' : 'Marcar processado'}
                     </button>

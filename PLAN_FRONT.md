@@ -75,10 +75,12 @@ Separada das demais telas de dados porque envolve trabalho novo de verdade (não
 
 ## Sprint 3 — Produtos, Pedidos e Financeiro
 
-- [ ] Produtos/Pedidos/Financeiro — tabelas seguindo `tables.html`/`table-01.html`/`table-02.html` do template, reaproveitando paginação, filtros e ordenação por coluna já existentes (só troca a casca visual, não a lógica).
-- [ ] Detalhe do pedido (`orders/[id]`) — cards + tabela de itens/pagamentos no mesmo padrão.
+- [X] Produtos/Pedidos/Financeiro — tabelas reskinadas no padrão TailAdmin (`bg-gray-2`/`bg-meta-4` no cabeçalho, `border-stroke`/`strokedark` nas linhas), reaproveitando paginação, filtros e ordenação por coluna já existentes (só a casca visual mudou, a lógica de cada página ficou intacta).
+- [X] Detalhe do pedido (`orders/[id]`) — cards + tabelas de itens/pagamentos no mesmo padrão.
+- [X] Novo componente `StatusBadge` (compartilhado) — cor semântica por status (verde pra pago/aprovado/ativo, amarelo pra pendente/em revisão, vermelho pra cancelado/rejeitado, azul pra reembolsado), usado em Produtos, Pedidos, Financeiro e no detalhe do pedido.
+- [X] `Pagination` (compartilhado) reskinado.
 
-**Entregável:** produtos, pedidos (lista e detalhe) e financeiro com o visual novo, mesma funcionalidade de hoje. Validado no navegador (claro/escuro) com dados reais. `tsc`/`lint`/`test`/`build` limpos.
+**Entregável:** produtos, pedidos (lista e detalhe) e financeiro com o visual novo, mesma funcionalidade de hoje. `tsc`/`lint`/`test`/`build` limpos (18/18 testes). Confirmado que as 4 rotas respondem `200` e que as classes novas (`bg-success`, `text-danger` etc.) compilam no CSS, via `curl` contra o dev server com dados reais — **não validado num navegador de verdade** (sem ferramenta de screenshot nesta sessão). Peço que você confira visualmente antes de eu seguir pra Sprint 4.
 
 ---
 

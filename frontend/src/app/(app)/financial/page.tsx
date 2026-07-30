@@ -10,9 +10,8 @@ import { AccountSelector } from '@/components/dashboard/AccountSelector';
 import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { Pagination } from '@/components/shared/Pagination';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { BRASILIA_TIMEZONE, formatReleaseDate } from '@/utils/format';
-import listStyles from '@/styles/list.module.css';
-import dashStyles from '@/styles/dashboard.module.css';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos os status' },
@@ -22,6 +21,9 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelado' },
   { value: 'in_mediation', label: 'Em mediação' },
 ];
+
+const inputClass =
+  'rounded-lg border border-stroke bg-transparent px-4 py-2 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -77,11 +79,13 @@ export default function FinancialPage() {
   }, [loadData]);
 
   return (
-    <div className={listStyles.container}>
-      <div className={listStyles.header}>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className={listStyles.title}>Financeiro</h1>
-          <p className={listStyles.subtitle}>Extrato de pagamentos e conciliação com pedidos.</p>
+          <h1 className="text-title-md font-bold text-black dark:text-white">Financeiro</h1>
+          <p className="mt-1 text-sm text-body dark:text-bodydark">
+            Extrato de pagamentos e conciliação com pedidos.
+          </p>
         </div>
         <AccountSelector
           accounts={accounts}
@@ -106,10 +110,10 @@ export default function FinancialPage() {
       />
 
       {isLoading && !summary ? (
-        <p className={listStyles.subtitle}>Carregando dados financeiros...</p>
+        <p className="text-sm text-body dark:text-bodydark">Carregando dados financeiros...</p>
       ) : summary ? (
         <>
-          <div className={dashStyles.grid}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard label="Total recebido" value={formatCurrency(summary.total_received)} />
             {Object.entries(summary.by_status).map(([statusKey, row]) => (
               <KpiCard
@@ -121,25 +125,31 @@ export default function FinancialPage() {
             ))}
           </div>
 
-          <div className={listStyles.section}>
-            <h2 className={listStyles.title} style={{ fontSize: '1.1rem' }}>
+          <div className="flex flex-col gap-3">
+            <h2 className="text-lg font-semibold text-black dark:text-white">
               Por método de pagamento
             </h2>
-            <div className={listStyles.tableWrapper}>
-              <table className={listStyles.table}>
+            <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
+              <table className="w-full table-auto">
                 <thead>
-                  <tr>
-                    <th>Método</th>
-                    <th>Quantidade</th>
-                    <th>Valor</th>
+                  <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                    <th className="px-4 py-4 font-medium text-black dark:text-white">Método</th>
+                    <th className="px-4 py-4 font-medium text-black dark:text-white">Quantidade</th>
+                    <th className="px-4 py-4 font-medium text-black dark:text-white">Valor</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(summary.by_method).map(([method, row]) => (
                     <tr key={method}>
-                      <td>{method}</td>
-                      <td>{row.total}</td>
-                      <td>{formatCurrency(row.amount)}</td>
+                      <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                        {method}
+                      </td>
+                      <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                        {row.total}
+                      </td>
+                      <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                        {formatCurrency(row.amount)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -147,36 +157,51 @@ export default function FinancialPage() {
             </div>
           </div>
 
-          <div className={listStyles.section}>
-            <h2 className={listStyles.title} style={{ fontSize: '1.1rem' }}>
+          <div className="flex flex-col gap-3">
+            <h2 className="text-lg font-semibold text-black dark:text-white">
               Conciliação — pedidos pagos com valor divergente do aprovado
             </h2>
             {reconciliation.length === 0 ? (
-              <p className={listStyles.subtitle}>Nenhuma divergência encontrada. ✓</p>
+              <p className="text-sm text-body dark:text-bodydark">
+                Nenhuma divergência encontrada. ✓
+              </p>
             ) : (
-              <div className={listStyles.tableWrapper}>
-                <table className={listStyles.table}>
+              <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
+                <table className="w-full table-auto">
                   <thead>
-                    <tr>
-                      <th>Pedido</th>
-                      <th>Data</th>
-                      <th>Valor do pedido</th>
-                      <th>Aprovado</th>
-                      <th>Diferença</th>
+                    <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                      <th className="px-4 py-4 font-medium text-black dark:text-white">Pedido</th>
+                      <th className="px-4 py-4 font-medium text-black dark:text-white">Data</th>
+                      <th className="px-4 py-4 font-medium text-black dark:text-white">
+                        Valor do pedido
+                      </th>
+                      <th className="px-4 py-4 font-medium text-black dark:text-white">Aprovado</th>
+                      <th className="px-4 py-4 font-medium text-black dark:text-white">
+                        Diferença
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {reconciliation.map((row) => (
                       <tr key={row.order_id}>
-                        <td>
-                          <Link href={`/orders/${row.order_id}`} className={listStyles.link}>
+                        <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
+                          <Link
+                            href={`/orders/${row.order_id}`}
+                            className="font-medium text-primary"
+                          >
                             {row.mercadolivre_order_id}
                           </Link>
                         </td>
-                        <td>{formatDate(row.ordered_at)}</td>
-                        <td>{formatCurrency(row.order_total)}</td>
-                        <td>{formatCurrency(row.approved_amount)}</td>
-                        <td style={{ color: 'var(--color07)' }}>
+                        <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                          {formatDate(row.ordered_at)}
+                        </td>
+                        <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                          {formatCurrency(row.order_total)}
+                        </td>
+                        <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                          {formatCurrency(row.approved_amount)}
+                        </td>
+                        <td className="border-b border-stroke px-4 py-3 font-medium text-danger dark:border-strokedark">
                           {formatCurrency(row.difference)}
                         </td>
                       </tr>
@@ -189,14 +214,14 @@ export default function FinancialPage() {
         </>
       ) : null}
 
-      <div className={listStyles.section}>
-        <h2 className={listStyles.title} style={{ fontSize: '1.1rem' }}>
-          Extrato de pagamentos
-        </h2>
+      <div className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold text-black dark:text-white">Extrato de pagamentos</h2>
 
-        <div className={listStyles.filters}>
-          <div className={listStyles.field}>
-            <label htmlFor="status">Status</label>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="status" className="text-sm font-medium text-black dark:text-white">
+              Status
+            </label>
             <select
               id="status"
               value={status}
@@ -204,6 +229,7 @@ export default function FinancialPage() {
                 setStatus(e.target.value);
                 setPage(1);
               }}
+              className={inputClass}
             >
               {STATUS_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -212,8 +238,13 @@ export default function FinancialPage() {
               ))}
             </select>
           </div>
-          <div className={listStyles.field}>
-            <label htmlFor="payment_method">Método</label>
+          <div className="flex flex-col gap-1.5">
+            <label
+              htmlFor="payment_method"
+              className="text-sm font-medium text-black dark:text-white"
+            >
+              Método
+            </label>
             <input
               id="payment_method"
               type="text"
@@ -223,44 +254,56 @@ export default function FinancialPage() {
                 setPaymentMethod(e.target.value);
                 setPage(1);
               }}
+              className={inputClass}
             />
           </div>
         </div>
 
         {payments.length === 0 ? (
-          <p className={listStyles.subtitle}>Nenhum pagamento encontrado.</p>
+          <p className="text-sm text-body dark:text-bodydark">Nenhum pagamento encontrado.</p>
         ) : (
-          <div className={listStyles.tableWrapper}>
-            <table className={listStyles.table}>
+          <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
+            <table className="w-full table-auto">
               <thead>
-                <tr>
-                  <th>Pedido</th>
-                  <th>Status</th>
-                  <th>Valor</th>
-                  <th>Método</th>
-                  <th>Data</th>
-                  <th>Liberação</th>
+                <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                  <th className="px-4 py-4 font-medium text-black dark:text-white">Pedido</th>
+                  <th className="px-4 py-4 font-medium text-black dark:text-white">Status</th>
+                  <th className="px-4 py-4 font-medium text-black dark:text-white">Valor</th>
+                  <th className="px-4 py-4 font-medium text-black dark:text-white">Método</th>
+                  <th className="px-4 py-4 font-medium text-black dark:text-white">Data</th>
+                  <th className="px-4 py-4 font-medium text-black dark:text-white">Liberação</th>
                 </tr>
               </thead>
               <tbody>
                 {payments.map((payment) => (
                   <tr key={payment.id}>
-                    <td>
+                    <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
                       {payment.order ? (
-                        <Link href={`/orders/${payment.order.id}`} className={listStyles.link}>
+                        <Link
+                          href={`/orders/${payment.order.id}`}
+                          className="font-medium text-primary"
+                        >
                           {payment.order.mercadolivre_order_id}
                         </Link>
                       ) : (
                         '—'
                       )}
                     </td>
-                    <td>
-                      <span className={listStyles.badge}>{payment.status}</span>
+                    <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
+                      <StatusBadge status={payment.status} />
                     </td>
-                    <td>{formatCurrency(payment.transaction_amount)}</td>
-                    <td>{payment.payment_method ?? '—'}</td>
-                    <td>{formatDate(payment.paid_at)}</td>
-                    <td>{formatReleaseDate(payment.money_release_date, payment.released)}</td>
+                    <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                      {formatCurrency(payment.transaction_amount)}
+                    </td>
+                    <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                      {payment.payment_method ?? '—'}
+                    </td>
+                    <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                      {formatDate(payment.paid_at)}
+                    </td>
+                    <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                      {formatReleaseDate(payment.money_release_date, payment.released)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
