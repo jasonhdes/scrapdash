@@ -51,4 +51,4 @@ O JWT dura 60 minutos (`JWT_TTL`) e **não há refresh automático silencioso em
 
 ## Notificação de mensagem não lida
 
-Não há push/websocket — é reflexo do que já está sincronizado: `read_at` nulo numa mensagem `received` conta como não lida. O `NavBar` faz polling de `GET /accounts/{account}/messages` a cada 30s pro badge; o dashboard mostra o mesmo total como alerta clicável.
+Não há push/websocket — é reflexo do que já está sincronizado: `read_at` nulo numa mensagem `received` conta como não lida. O `Sidebar` faz polling de `GET /accounts/{account}/messages` a cada 30s pro badge; o dashboard mostra o mesmo total como alerta clicável.

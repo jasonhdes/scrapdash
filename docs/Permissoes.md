@@ -58,7 +58,7 @@ Antes do Sprint 9, todo controller usava só `authorize('view'/'update', $accoun
 O frontend **nunca decide** permissão sozinho — só espelha o que o backend manda, pra não ficar dessincronizado nem virar a fonte de verdade por engano:
 
 - `GET /accounts` devolve, em cada conta, o campo `permissions` já resolvido pro usuário autenticado (`AccountResource::resolvePermissions()`).
-- `NavBar` esconde o link de um módulo se `permissions[modulo]` não contém `view`, e esconde o link "Funcionários" se `user.role === 'user_partner'`.
+- `Sidebar` esconde o link de um módulo se `permissions[modulo]` não contém `view`, e esconde o link "Funcionários" se `user.role === 'user_partner'`.
 - Isso é só UX (evita cliques que dariam 403) — a aplicação real da regra é sempre no backend. Navegar direto pra uma URL de um módulo sem permissão ainda retorna 403 do backend.
 
 ## Auditoria

@@ -25,7 +25,7 @@ Scrap Dash é uma aplicação de duas camadas desacopladas, comunicando-se por u
 ```
 
 - **Backend**: Laravel 12 (PHP 8.2), API-only (sem sessões/Blade nas rotas de negócio), autenticação stateless via JWT (`tymon/jwt-auth`).
-- **Frontend**: Next.js 16 (App Router), React 19, TypeScript, sem framework de CSS (CSS Modules simples). Sem SSR autenticado — todas as telas protegidas buscam dados client-side depois do JWT carregar.
+- **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4 (paleta/tipografia TailAdmin). Sem SSR autenticado — todas as telas protegidas buscam dados client-side depois do JWT carregar.
 - **Banco**: MySQL/MariaDB (via XAMPP em dev). Testes automatizados usam SQLite em memória.
 - **Integrações externas**: Mercado Livre (OAuth2 + PKCE, API de itens/pedidos/pagamentos/mensagens) e Google Identity Services (login social).
 
@@ -64,16 +64,22 @@ Não há webhooks configurados — a sincronização é por polling. Um schedule
 
 ```
 frontend/src/
-├── app/                 # rotas (App Router) — uma pasta por página (dashboard, orders, products, financial, messages, employees)
+├── app/
+│   ├── (app)/           # route group das telas autenticadas (dashboard, orders, products, financial, messages, employees) — layout.tsx aqui monta Sidebar + Header + SessionGuard e centraliza o redirect de "não autenticado"
+│   ├── login/, register/ # telas públicas, standalone (sem Sidebar/Header)
+│   └── page.tsx          # landing "/", redireciona pro dashboard se já autenticado
 ├── components/          # componentes reutilizáveis, agrupados por domínio (dashboard/, auth/, employees/, layout/, shared/)
 ├── contexts/            # AuthContext (única fonte de verdade do usuário logado/token)
-├── hooks/               # useAuth, useAccounts, useDashboard, useConversations, useTokenExpiry
+├── hooks/               # useAuth, useAccounts, useDashboard, useRevenueSeries, useCustomersByState, useConversations, useTokenExpiry, useTheme
 ├── services/            # uma função por chamada de API (orders.ts, products.ts, employees.ts, ...) — todas passam por apiFetch (services/api.ts)
 ├── types/               # tipos TypeScript espelhando os JsonResource do backend
-└── styles/               # CSS Modules, um arquivo por tela/domínio + colors.css (paleta em variáveis --colorNN)
+├── utils/               # format.ts (datas/fuso), brazilStates.ts (nome do estado → sigla, usado pelo mapa do dashboard)
+└── styles/              # colors.css — paleta TailAdmin inteira via @theme do Tailwind v4 (cada --color-* é ao mesmo tempo classe utilitária e variável CSS); não há mais CSS Modules por tela, todo o visual é Tailwind
 ```
 
 Não há gerenciador de estado global (Redux/Zustand) — `AuthContext` cobre autenticação, e cada página busca seus próprios dados via hooks locais. Isso é intencional: o app não tem estado compartilhado complexo o suficiente pra justificar uma lib de estado.
+
+Tema claro/escuro é manual (`useTheme`, persistido em `localStorage`, classe `dark` na tag `<html>`), com fallback pra `prefers-color-scheme` até o usuário escolher — ver `PLAN_FRONT.md` pra decisões de migração do visual.
 
 ## Autorização
 

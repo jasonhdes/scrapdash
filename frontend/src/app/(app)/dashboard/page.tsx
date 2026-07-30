@@ -16,7 +16,6 @@ import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { StatusDonutChart } from '@/components/dashboard/StatusDonutChart';
 import { BrazilMap } from '@/components/dashboard/BrazilMap';
-import styles from '@/styles/dashboard.module.css';
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
   paid: 'Pago',
@@ -43,13 +42,7 @@ function formatCurrency(value: number, currency: string | null) {
 
 export default function DashboardPage() {
   return (
-    <Suspense
-      fallback={
-        <div className={styles.page}>
-          <p>Carregando...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<p className="text-sm text-body dark:text-bodydark">Carregando...</p>}>
       <DashboardContent />
     </Suspense>
   );
@@ -138,7 +131,7 @@ function DashboardContent() {
   const isBusy = !!selectedAccount && connectingId === selectedAccount.id;
 
   const kpiGrid = dashboard ? (
-    <div className={styles.grid}>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
       <KpiCard
         label="Receita"
         value={formatCurrency(dashboard.revenue.total, dashboard.revenue.currency)}
@@ -155,24 +148,24 @@ function DashboardContent() {
   ) : null;
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className={styles.title}>Bem-vindo, {user.name}</h1>
-          <p className={styles.subtitle}>
+          <h1 className="text-title-md font-bold text-black dark:text-white">
+            Bem-vindo, {user.name}
+          </h1>
+          <p className="mt-1 text-sm text-body dark:text-bodydark">
             {user.email} · perfil: {user.role}
           </p>
         </div>
-        <div className={styles.connectRow}>
-          <AccountSelector
-            accounts={accounts}
-            selectedId={selectedAccountId}
-            onChange={setSelectedAccountId}
-          />
-        </div>
+        <AccountSelector
+          accounts={accounts}
+          selectedId={selectedAccountId}
+          onChange={setSelectedAccountId}
+        />
       </div>
 
-      {feedback && <p className={styles.subtitle}>{feedback}</p>}
+      {feedback && <p className="text-sm text-body dark:text-bodydark">{feedback}</p>}
 
       <DateRangeFilter
         startDate={startDate}
@@ -188,11 +181,11 @@ function DashboardContent() {
       />
 
       {needsConnect && (
-        <div className={styles.connectRow}>
+        <div>
           <button
-            className={styles.button}
             disabled={isBusy}
             onClick={() => handleConnect(selectedAccount)}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
           >
             {isBusy ? 'Conectando...' : 'Conectar conta Mercado Livre'}
           </button>
@@ -200,14 +193,21 @@ function DashboardContent() {
       )}
 
       {dashboard && dashboard.alerts.length > 0 && (
-        <div className={styles.alerts}>
+        <div className="flex flex-col gap-2">
           {dashboard.alerts.map((alert, i) =>
             alert.type === 'unread_messages' ? (
-              <Link key={i} href="/messages" className={styles.alert}>
+              <Link
+                key={i}
+                href="/messages"
+                className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-black dark:text-white"
+              >
                 {alert.message}
               </Link>
             ) : (
-              <div key={i} className={styles.alert}>
+              <div
+                key={i}
+                className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-black dark:text-white"
+              >
                 {alert.message}
               </div>
             ),
@@ -216,15 +216,15 @@ function DashboardContent() {
       )}
 
       {dashboardLoading && !dashboard ? (
-        <p className={styles.subtitle}>Carregando KPIs...</p>
+        <p className="text-sm text-body dark:text-bodydark">Carregando KPIs...</p>
       ) : needsRefresh ? (
-        <div className={styles.blurWrapper}>
-          <div className={styles.blurredContent}>{kpiGrid}</div>
-          <div className={styles.blurOverlay}>
+        <div className="relative">
+          <div className="pointer-events-none blur-md select-none">{kpiGrid}</div>
+          <div className="absolute inset-0 flex items-center justify-center">
             <button
-              className={styles.button}
               disabled={isBusy}
               onClick={() => handleConnect(selectedAccount)}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
             >
               {isBusy ? 'Atualizando...' : 'Atualizar'}
             </button>

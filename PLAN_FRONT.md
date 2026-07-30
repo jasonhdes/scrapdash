@@ -86,21 +86,21 @@ Separada das demais telas de dados porque envolve trabalho novo de verdade (não
 
 ## Sprint 4 — Telas Restantes
 
-- [ ] Mensagens — adaptar `inbox.html`/`messages.html` do template pro layout de duas colunas (lista de conversas + thread) já existente — maior esforço de adaptação desta sprint, sem equivalente 1:1 no template.
-- [ ] Funcionários — grade de permissões construída a partir dos primitivos de formulário/tabela/badge do template (`form-elements.html`, `badge.html`) — sem equivalente direto no template.
+- [X] Mensagens — layout de duas colunas (lista de conversas + thread) reskinado no padrão TailAdmin (sem equivalente 1:1 no template, adaptado do zero): lista com hover/estado ativo, bolhas de mensagem enviada/recebida com cores diferentes, formulário de resposta fixo embaixo. Lógica (polling de conversas, envio de resposta, badge de não lida) intacta.
+- [X] Funcionários — formulário de criação e cards de funcionário reskinados; `PermissionGrid` reskinado preservando a mesma estrutura de tabela (`role="row"`, ordem dos checkboxes) pra não quebrar `PermissionGrid.test.tsx`.
 
-**Entregável:** todas as telas autenticadas no visual novo. Validado no navegador (claro/escuro) com dados reais. `tsc`/`lint`/`test`/`build` limpos.
+**Entregável:** todas as telas autenticadas no visual novo — fim do reskin de tela por tela do `PLAN_FRONT.md`. `tsc`/`lint`/`test`/`build` limpos (18/18 testes, incluindo `PermissionGrid.test.tsx` sem alterações). Confirmado `/messages` e `/employees` respondendo `200` e as classes novas compiladas no CSS via `curl` contra o dev server — **não validado num navegador de verdade** (sem ferramenta de screenshot nesta sessão). Peço que você confira visualmente antes de eu seguir pra Sprint 5 (limpeza final).
 
 ---
 
 ## Sprint 5 — Limpeza e Verificação Final
 
-- [ ] Remover todos os `.module.css` não usados (`auth`, `dashboard`, `list`, `session`, `messages`, `nav`, `employees`) e o `colors.css` antigo.
-- [ ] Atualizar `docs/Arquitetura.md` (seção "Frontend — organização de pastas") pra refletir Tailwind no lugar de CSS Modules.
-- [ ] Rodar a suíte completa (`tsc`, `lint`, `test`, `build`) uma última vez; ajustar testes de componente que precisarem (mudança de markup pode afetar queries em `PermissionGrid.test.tsx` etc.).
-- [ ] QA manual final: cada tela, claro e escuro, larguras mobile (ganho real sobre o layout atual, que não foi pensado pra mobile).
+- [X] Removidos todos os `.module.css` (`auth`, `dashboard`, `list`, `session`, `messages`, `nav`, `employees`) e o `NavBar.tsx` (morto desde a Sprint 1 — substituído pelo `Sidebar`). Isso exigiu terminar de reskinar 3 pontos que ainda dependiam deles e não estavam explicitamente em nenhuma sprint anterior: o dashboard (só a casca — header/KPI grid/alertas — continuava em CSS Module; os gráficos da Sprint 2 já eram Tailwind), o `SessionGuard` (alerta de sessão expirando/expirada, aparece em toda tela autenticada) e a landing `/` (pré-login). `colors.css` ficou só com a paleta TailAdmin; as 9 variáveis antigas (`--colorNN`) saíram, e `globals.css` passou a usar a paleta nova (`--color-whiten`/`--color-boxdark-2`) pro fundo do `<body>`, também pela classe `.dark` em vez de `prefers-color-scheme`.
+- [X] Atualizado `docs/Arquitetura.md` ("Frontend — organização de pastas": Tailwind no lugar de CSS Modules, route group `(app)/`, pastas `utils/`/hooks novos). Também corrigidas menções ao `NavBar` (componente removido) em `CasosDeUso.md`, `Fluxos.md` e `Permissoes.md` pra `Sidebar` — `Changelog.md` não foi tocado por ser registro histórico.
+- [X] Suíte completa (`tsc`, `lint`, `test`, `build`) limpa — `PermissionGrid.test.tsx` não precisou de nenhum ajuste (a estrutura de tabela/`role="row"`/ordem dos checkboxes foi preservada de propósito nos reskins).
+- [X] QA final: todas as 10 rotas (`/`, `/login`, `/register`, `/dashboard`, `/products`, `/orders`, `/orders/[id]`, `/financial`, `/messages`, `/employees`) respondendo `200` contra o dev server com dados reais; confirmado que a paleta nova compila no CSS e que nenhum `--colorNN` antigo sobrou no bundle. **Não validado num navegador de verdade** (sem ferramenta de screenshot nesta sessão, em nenhuma das 5 sprints) — claro/escuro e larguras mobile continuam pendentes da sua conferência visual.
 
-**Entregável:** frontend com o mesmo comportamento/funcionalidade de hoje (mais gráficos/mapa no dashboard), visual TailAdmin (Tailwind CSS) em vez de CSS Modules, responsivo, sem CSS morto sobrando.
+**Entregável:** frontend com o mesmo comportamento/funcionalidade de antes (mais gráficos/mapa no dashboard), visual TailAdmin (Tailwind CSS) em vez de CSS Modules, responsivo, sem CSS morto sobrando. Migração `PLAN_FRONT.md` concluída — falta só a sua validação visual (em especial claro/escuro e mobile, que eu não consegui testar diretamente).
 
 ---
 
