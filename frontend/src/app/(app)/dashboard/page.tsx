@@ -6,12 +6,31 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useDashboard } from '@/hooks/useDashboard';
+import { useRevenueSeries } from '@/hooks/useRevenueSeries';
+import { useCustomersByState } from '@/hooks/useCustomersByState';
 import { connectMercadoLivre } from '@/services/accounts';
 import type { Account } from '@/types/account';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
 import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
+import { RevenueChart } from '@/components/dashboard/RevenueChart';
+import { StatusDonutChart } from '@/components/dashboard/StatusDonutChart';
+import { BrazilMap } from '@/components/dashboard/BrazilMap';
 import styles from '@/styles/dashboard.module.css';
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  paid: 'Pago',
+  cancelled: 'Cancelado',
+  partially_refunded: 'Parcialmente reembolsado',
+};
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  approved: 'Aprovado',
+  refunded: 'Reembolsado',
+  rejected: 'Rejeitado',
+  cancelled: 'Cancelado',
+  in_mediation: 'Em mediação',
+};
 
 const DATE_RANGE_STORAGE_KEY = 'scrapdash_dashboard_date_range';
 
@@ -52,6 +71,18 @@ function DashboardContent() {
   const [endDate, setEndDate] = useState('');
 
   const { data: dashboard, isLoading: dashboardLoading } = useDashboard(
+    selectedAccountId,
+    token,
+    startDate || null,
+    endDate || null,
+  );
+  const { data: revenueSeries } = useRevenueSeries(
+    selectedAccountId,
+    token,
+    startDate || null,
+    endDate || null,
+  );
+  const { data: customersByState } = useCustomersByState(
     selectedAccountId,
     token,
     startDate || null,
@@ -201,6 +232,39 @@ function DashboardContent() {
         </div>
       ) : (
         kpiGrid
+      )}
+
+      {dashboard && !needsRefresh && (
+        <>
+          {revenueSeries && revenueSeries.series.length > 0 && (
+            <div className="rounded-sm border border-stroke bg-white px-5 pb-5 pt-7.5 shadow-1 dark:border-strokedark dark:bg-boxdark sm:px-7.5">
+              <h3 className="mb-4 text-lg font-semibold text-black dark:text-white">
+                Receita no período
+              </h3>
+              <RevenueChart series={revenueSeries.series} currency={revenueSeries.currency} />
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <StatusDonutChart
+              title="Pedidos por status"
+              byStatus={dashboard.orders.by_status}
+              labels={ORDER_STATUS_LABELS}
+            />
+            <StatusDonutChart
+              title="Pagamentos por status"
+              byStatus={dashboard.payments.by_status}
+              labels={PAYMENT_STATUS_LABELS}
+            />
+          </div>
+
+          <div className="rounded-sm border border-stroke bg-white px-5 pb-5 pt-7.5 shadow-1 dark:border-strokedark dark:bg-boxdark sm:px-7.5">
+            <h3 className="mb-4 text-lg font-semibold text-black dark:text-white">
+              Clientes por estado
+            </h3>
+            <BrazilMap data={customersByState} />
+          </div>
+        </>
       )}
     </div>
   );

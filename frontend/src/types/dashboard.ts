@@ -15,3 +15,23 @@ export interface DashboardData {
   last_synced_at: string | null;
   generated_at: string;
 }
+
+export interface RevenueSeriesPoint {
+  date: string;
+  revenue: number;
+}
+
+export interface RevenueSeriesData {
+  period: { start_date: string; end_date: string };
+  currency: string | null;
+  series: RevenueSeriesPoint[];
+}
+
+export interface CustomersByStateRow {
+  state: string;
+  total: number;
+}
+
+export interface CustomersByStateData {
+  data: CustomersByStateRow[];
+}

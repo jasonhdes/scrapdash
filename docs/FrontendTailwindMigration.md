@@ -47,15 +47,16 @@ title-xxl..title-xsm (escala tipográfica de títulos, 18px a 44px)
 
 Separada das demais telas de dados porque envolve trabalho novo de verdade (não só reskin) e um risco técnico a validar cedo (mapa).
 
-- [ ] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/revenue-series` — receita agregada por dia dentro do período filtrado (hoje `DashboardService` só devolve o total somado, sem série diária não dá pra desenhar tendência).
-- [ ] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/customers-by-state` — contagem de pedidos agrupados por `orders.buyer_state` (dado já sincronizado desde o Sprint 6 do `PLAN.md` via `SyncOrderAddressesJob`, só falta agregar).
-- [ ] Instalar `apexcharts` + `react-apexcharts` (wrapper oficial React).
-- [ ] Instalar `jsvectormap` — **risco a validar antes de prometer prazo**: sem wrapper React maduro/compatível com React 19 (integrar a lib vanilla via `useRef`/`useEffect`); confirmar se traz mapa dos estados do Brasil pronto ou se precisa de GeoJSON à parte.
-- [ ] Dashboard — cards de KPI no estilo do template (`cards.html`).
-- [ ] Dashboard — gráfico de receita ao longo do período (linha/área) usando o endpoint novo.
-- [ ] Dashboard — gráficos de pizza/donut pra pedidos por status e pagamentos por status (dado já existente, sem endpoint novo).
-- [ ] Dashboard — mapa de distribuição de clientes por estado, usando o endpoint novo.
-- [ ] Verificar: `tsc`/`lint`/`test`/`build` limpos + QA manual no navegador (claro/escuro) com dados reais.
+- [X] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/revenue-series` — receita diária (pedidos pagos); sem período, últimos 30 dias. Testado com dados reais.
+- [X] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/customers-by-state` — contagem de pedidos agrupados por `orders.buyer_state`. Testado com dados reais (24 estados).
+- [X] 4 testes automatizados novos (`DashboardControllerTest`); suíte completa do backend 26/26.
+- [X] Instalar `apexcharts` + `react-apexcharts`.
+- [X] **`jsvectormap` — risco confirmado**: só traz mapa mundial, sem dado de estados do Brasil, sem pacote de mapa BR compatível encontrado. Trocado por `@svg-maps/brazil` (paths SVG por estado, zero dependências) + componente React nativo (`BrazilMap.tsx`) com choropleth por opacidade — mais robusto pro React 19 que integrar uma lib imperativa via `useRef`. Utilitário `utils/brazilStates.ts` converte nome completo do estado (formato que o Mercado Livre devolve) pra sigla; validado contra os 24 estados reais da conta de teste, 100% de acerto.
+- [X] Dashboard — cards de KPI reskinados (componentes compartilhados com o Financeiro, que herda o visual novo antecipadamente).
+- [X] Dashboard — gráfico de receita (área, ApexCharts) usando o endpoint novo.
+- [X] Dashboard — donuts de pedidos por status e pagamentos por status.
+- [X] Dashboard — mapa de distribuição de clientes por estado.
+- [X] Verificar: `tsc`/`lint`/`test`/`build` limpos (frontend e backend). **QA manual no navegador ainda não feito** (sem ferramenta de screenshot nesta sessão) — validado via `curl` autenticado contra os endpoints e o dev server com dados reais.
 
 ## Fase 2 — Produtos, Pedidos e Financeiro
 
