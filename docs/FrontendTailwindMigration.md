@@ -31,31 +31,32 @@ title-xxl..title-xsm (escala tipográfica de títulos, 18px a 44px)
 ## Fase 0 — Fundação (bloqueia as demais fases)
 
 - [X] Instalar Tailwind CSS v4 (`tailwindcss` + `@tailwindcss/postcss`) no frontend.
-- [ ] Configurar `postcss.config.mjs` e importar Tailwind em `frontend/src/app/globals.css` (`@import "tailwindcss"`).
-- [ ] Portar a paleta de cores e a escala tipográfica do TailAdmin pro `@theme` do Tailwind v4 **dentro de** `frontend/src/styles/colors.css` (substitui as 9 variáveis antigas, mas continua sendo o único arquivo com cor — resto do app chama via variável/classe gerada, nunca hex direto).
-- [ ] Criar `frontend/src/components/layout/Sidebar.tsx` — recriado a partir de `partials/sidebar.html` do template (mesmas classes/paleta: `bg-black dark:bg-boxdark`, `text-bodydark1`, `hover:bg-graydark dark:hover:bg-meta-4`), mas com os 6 itens reais do Scrap Dash (Dashboard, Produtos, Pedidos, Financeiro, Mensagens, Funcionários) — sem os itens de demonstração do template (Calendar, Tasks, Invoice, Inbox genérico, etc.). Mensagens mantém o badge de não lidas já existente (`useConversations`), no mesmo padrão visual do badge `bg-primary` do template. Links de módulo continuam escondidos conforme `account.permissions`, igual ao `NavBar` atual.
-- [ ] Criar `frontend/src/components/layout/Header.tsx` — barra superior fixa (`sticky`, `bg-white dark:bg-boxdark`), botão hamburger pra colapsar a sidebar no mobile (`useState`, substitui o `@click` do Alpine), botão de alternância claro/escuro (switch com ícone de sol/lua, mesmo padrão visual do template), dropdown de usuário (nome/e-mail/Sair, reaproveitando `logout()` do `AuthContext`). **Sem** os dropdowns de notificação/chat genéricos do template (dado fake, sem funcionalidade real por trás) nem busca (não há caso de uso hoje).
-- [ ] Alternância de tema: `useState` + `localStorage` (substitui `x-data`/`$persist` do Alpine), aplica/remove a classe `dark` na tag `<html>`. Sem escolha salva ainda, respeita `prefers-color-scheme` (primeira visita); depois de escolher, fica fixo na preferência salva.
-- [ ] Criar `frontend/src/app/(app)/layout.tsx` — route group envolvendo as páginas autenticadas com `Sidebar` + `Header` + `SessionGuard`, absorvendo o redirect de "não autenticado" hoje duplicado em cada página (`if (!authLoading && !user) router.push("/login")`).
-- [ ] Mover `dashboard/`, `products/`, `orders/`, `orders/[id]/`, `financial/`, `messages/`, `employees/` pra dentro de `app/(app)/` (só reorganização de pasta — o conteúdo interno de cada página continua com o CSS Module antigo até as fases seguintes tocarem nela).
-- [ ] Reskin de `/login` e `/register` — layout de card dividido (ilustração + formulário, ilustração escondida no mobile) inspirado em `signin.html`/`signup.html` do template, mas como página standalone (sem sidebar/header, já que o usuário ainda não está autenticado). Reaproveita a lógica de formulário já existente (`useAuth().login/register`, `GoogleSignInButton`).
-- [ ] Branding: logo/nome "Scrap Dash" no lugar do logo do TailAdmin.
-- [ ] Verificar: `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build` limpos.
-- [ ] **Ponto de checagem**: parar aqui e confirmar com você que a direção visual (sidebar, paleta, tela de login, claro/escuro) está de acordo antes de reskinar as demais telas.
+- [X] Configurar `postcss.config.mjs` e importar Tailwind em `frontend/src/app/globals.css` (`@import "tailwindcss"`), incluindo `@custom-variant dark (&:where(.dark, .dark *))` pra alternância manual por classe (em vez do padrão `prefers-color-scheme` do v4).
+- [X] Portar a paleta de cores e a escala tipográfica do TailAdmin pro `@theme` do Tailwind v4 **dentro de** `frontend/src/styles/colors.css`. As 9 variáveis antigas (`--colorNN`) foram mantidas no mesmo arquivo por enquanto — ainda usadas pelas telas não migradas — remoção fica pra Fase 4 (Limpeza).
+- [X] Criar `frontend/src/components/layout/Sidebar.tsx` — recriado com a paleta/classes do TailAdmin (`bg-black dark:bg-boxdark`, `text-bodydark1`, `hover:bg-graydark dark:hover:bg-meta-4`), 6 itens reais do Scrap Dash (Dashboard, Produtos, Pedidos, Financeiro, Mensagens, Funcionários) — sem itens de demonstração. Badge de não lidas (`useConversations`) mantido. Links de módulo escondidos conforme `account.permissions`.
+- [X] Criar `frontend/src/components/layout/Header.tsx` — barra fixa (`sticky`, `bg-white dark:bg-boxdark`), hamburger (`useState`), alternância claro/escuro (sol/lua), dropdown de usuário (nome/e-mail/Sair, `logout()` do `AuthContext`). Sem notificação/chat/busca fake.
+- [X] Alternância de tema: `frontend/src/hooks/useTheme.ts` (`useState` + `localStorage`), aplica/remove `dark` na tag `<html>`. Respeita `prefers-color-scheme` até o usuário escolher; depois fica fixo na preferência salva. Script inline no `layout.tsx` raiz evita flash claro→escuro no carregamento.
+- [X] Criar `frontend/src/app/(app)/layout.tsx` — route group com `Sidebar` + `Header` + `SessionGuard`, absorvendo o redirect de "não autenticado" hoje antes duplicado em cada página.
+- [X] Mover `dashboard/`, `products/`, `orders/`, `orders/[id]/`, `financial/`, `messages/`, `employees/` pra dentro de `app/(app)/`. Além da reorganização de pasta, também foi removido o `NavBar`/`SessionGuard`/redirect duplicado de cada página (a shell nova já cobre isso, senão ficaria duplicado); o conteúdo interno de cada página continua com o CSS Module antigo até as fases seguintes tocarem nela.
+- [X] Reskin de `/login` e `/register` — card dividido (ilustração + formulário, ilustração escondida abaixo de `xl`), standalone, reaproveitando `useAuth().login/register` e `GoogleSignInButton`.
+- [X] Branding: "Scrap Dash" (marca "SD" + nome) no lugar do logo do TailAdmin — sidebar, login, register.
+- [X] Verificar: `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build` limpos.
+- [ ] **Ponto de checagem**: parar aqui e confirmar com você que a direção visual (sidebar, paleta, tela de login, claro/escuro) está de acordo antes de reskinar as demais telas. **Ainda não validado visualmente em navegador** (sem ferramenta de screenshot nesta sessão) — só conferido via HTML/CSS renderizado (`curl`) no dev server.
 
 ## Fase 1 — Dashboard (KPIs, Gráficos e Mapa)
 
 Separada das demais telas de dados porque envolve trabalho novo de verdade (não só reskin) e um risco técnico a validar cedo (mapa).
 
-- [ ] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/revenue-series` — receita agregada por dia dentro do período filtrado (hoje `DashboardService` só devolve o total somado, sem série diária não dá pra desenhar tendência).
-- [ ] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/customers-by-state` — contagem de pedidos agrupados por `orders.buyer_state` (dado já sincronizado desde o Sprint 6 do `PLAN.md` via `SyncOrderAddressesJob`, só falta agregar).
-- [ ] Instalar `apexcharts` + `react-apexcharts` (wrapper oficial React).
-- [ ] Instalar `jsvectormap` — **risco a validar antes de prometer prazo**: sem wrapper React maduro/compatível com React 19 (integrar a lib vanilla via `useRef`/`useEffect`); confirmar se traz mapa dos estados do Brasil pronto ou se precisa de GeoJSON à parte.
-- [ ] Dashboard — cards de KPI no estilo do template (`cards.html`).
-- [ ] Dashboard — gráfico de receita ao longo do período (linha/área) usando o endpoint novo.
-- [ ] Dashboard — gráficos de pizza/donut pra pedidos por status e pagamentos por status (dado já existente, sem endpoint novo).
-- [ ] Dashboard — mapa de distribuição de clientes por estado, usando o endpoint novo.
-- [ ] Verificar: `tsc`/`lint`/`test`/`build` limpos + QA manual no navegador (claro/escuro) com dados reais.
+- [X] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/revenue-series` — receita diária (pedidos pagos); sem período, últimos 30 dias. Testado com dados reais.
+- [X] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/customers-by-state` — contagem de pedidos agrupados por `orders.buyer_state`. Testado com dados reais (24 estados).
+- [X] 4 testes automatizados novos (`DashboardControllerTest`); suíte completa do backend 26/26.
+- [X] Instalar `apexcharts` + `react-apexcharts`.
+- [X] **`jsvectormap` — risco confirmado**: só traz mapa mundial, sem dado de estados do Brasil, sem pacote de mapa BR compatível encontrado. Trocado por `@svg-maps/brazil` (paths SVG por estado, zero dependências) + componente React nativo (`BrazilMap.tsx`) com choropleth por opacidade — mais robusto pro React 19 que integrar uma lib imperativa via `useRef`. Utilitário `utils/brazilStates.ts` converte nome completo do estado (formato que o Mercado Livre devolve) pra sigla; validado contra os 24 estados reais da conta de teste, 100% de acerto.
+- [X] Dashboard — cards de KPI reskinados (componentes compartilhados com o Financeiro, que herda o visual novo antecipadamente).
+- [X] Dashboard — gráfico de receita (área, ApexCharts) usando o endpoint novo.
+- [X] Dashboard — donuts de pedidos por status e pagamentos por status.
+- [X] Dashboard — mapa de distribuição de clientes por estado.
+- [X] Verificar: `tsc`/`lint`/`test`/`build` limpos (frontend e backend). **QA manual no navegador ainda não feito** (sem ferramenta de screenshot nesta sessão) — validado via `curl` autenticado contra os endpoints e o dev server com dados reais.
 
 ## Fase 2 — Produtos, Pedidos e Financeiro
 

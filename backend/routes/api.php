@@ -31,6 +31,8 @@ Route::middleware(['auth:api', 'throttle:api'])->group(function () {
     Route::get('accounts', [AccountController::class, 'index']);
     Route::post('accounts/{account}/mercadolivre/connect', [MercadoLivreAuthController::class, 'connect']);
     Route::get('accounts/{account}/dashboard', [DashboardController::class, 'show']);
+    Route::get('accounts/{account}/dashboard/revenue-series', [DashboardController::class, 'revenueSeries']);
+    Route::get('accounts/{account}/dashboard/customers-by-state', [DashboardController::class, 'customersByState']);
 
     Route::get('accounts/{account}/products', [ProductController::class, 'index']);
     Route::get('accounts/{account}/products/{product}', [ProductController::class, 'show']);

@@ -1,3 +1,77 @@
+/*
+ * Paleta TailAdmin — usada pelas telas já migradas pro Tailwind (ver
+ * PLAN_FRONT.md). Definida via @theme do Tailwind v4: cada `--color-*`
+ * vira ao mesmo tempo (a) uma classe utilitária (bg-primary, text-boxdark,
+ * etc.) e (b) uma variável CSS de verdade, usável em qualquer lugar via
+ * var(--color-primary) — inclusive fora de classe Tailwind, se precisar.
+ * Nenhuma cor deve ser hardcoded fora deste arquivo.
+ */
+@theme {
+  --color-primary: #3c50e0;
+  --color-secondary: #80caee;
+
+  --color-black: #1c2434;
+  --color-black-2: #010101;
+  --color-body: #64748b;
+  --color-bodydark: #aeb7c0;
+  --color-bodydark1: #dee4ee;
+  --color-bodydark2: #8a99af;
+
+  --color-stroke: #e2e8f0;
+  --color-gray: #eff4fb;
+  --color-graydark: #333a48;
+  --color-gray-2: #f7f9fc;
+  --color-gray-3: #fafafa;
+  --color-whiten: #f1f5f9;
+  --color-whiter: #f5f7fd;
+
+  --color-boxdark: #24303f;
+  --color-boxdark-2: #1a222c;
+  --color-strokedark: #2e3a47;
+  --color-form-strokedark: #3d4d60;
+  --color-form-input: #1d2a39;
+
+  --color-meta-1: #dc3545;
+  --color-meta-2: #eff2f7;
+  --color-meta-3: #10b981;
+  --color-meta-4: #313d4a;
+  --color-meta-5: #259ae6;
+  --color-meta-6: #ffba00;
+  --color-meta-7: #ff6766;
+  --color-meta-8: #f0950c;
+  --color-meta-9: #e5e7eb;
+
+  --color-success: #219653;
+  --color-danger: #d34053;
+  --color-warning: #ffa70b;
+
+  --text-title-xxl: 44px;
+  --text-title-xxl--line-height: 55px;
+  --text-title-xl: 36px;
+  --text-title-xl--line-height: 45px;
+  --text-title-xl2: 33px;
+  --text-title-xl2--line-height: 45px;
+  --text-title-lg: 28px;
+  --text-title-lg--line-height: 35px;
+  --text-title-md: 24px;
+  --text-title-md--line-height: 30px;
+  --text-title-md2: 26px;
+  --text-title-md2--line-height: 30px;
+  --text-title-sm: 20px;
+  --text-title-sm--line-height: 26px;
+  --text-title-xsm: 18px;
+  --text-title-xsm--line-height: 24px;
+
+  --shadow-1: 0px 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-2: 0px 1px 4px rgba(0, 0, 0, 0.12);
+  --shadow-default: 0px 8px 13px -3px rgba(0, 0, 0, 0.07);
+}
+
+/*
+ * Paleta antiga (Sprint 1–9), ainda usada pelas telas que não foram
+ * migradas pro Tailwind. Removida na Sprint 5 (Limpeza), quando não
+ * sobrar nenhum CSS Module referenciando isso — ver PLAN_FRONT.md.
+ */
 :root {
   --color01: #ffffff; /* branco - fundo claro, texto de botão sobre fundo escuro */
   --color02: #171717; /* quase preto - texto claro, fundo de botão primário */

@@ -104,6 +104,63 @@ class DashboardService
     }
 
     /**
+     * Receita diária (pedidos pagos) dentro do período — usada pro gráfico de
+     * tendência do dashboard. Sem período informado, usa os últimos 30 dias
+     * (diferente de `forAccount`, que é all-time por padrão: uma série
+     * all-time de anos não cabe num gráfico legível).
+     *
+     * @return array<string, mixed>
+     */
+    public function revenueSeries(Account $account, ?CarbonImmutable $startDate, ?CarbonImmutable $endDate): array
+    {
+        $endDate ??= CarbonImmutable::today();
+        $startDate ??= $endDate->subDays(29);
+
+        $orders = Order::where('account_id', $account->id)
+            ->where('status', 'paid')
+            ->whereBetween('ordered_at', [$startDate->startOfDay(), $endDate->endOfDay()])
+            ->get(['ordered_at', 'total_amount']);
+
+        $byDate = $orders->groupBy(fn (Order $order) => $order->ordered_at->toDateString())
+            ->map(fn ($group) => (float) $group->sum('total_amount'));
+
+        $series = [];
+        for ($date = $startDate; $date->lte($endDate); $date = $date->addDay()) {
+            $key = $date->toDateString();
+            $series[] = ['date' => $key, 'revenue' => $byDate->get($key, 0.0)];
+        }
+
+        $currency = Order::where('account_id', $account->id)->value('currency');
+
+        return [
+            'period' => ['start_date' => $startDate->toDateString(), 'end_date' => $endDate->toDateString()],
+            'currency' => $currency,
+            'series' => $series,
+        ];
+    }
+
+    /**
+     * Quantidade de pedidos por estado do comprador — usada no mapa de
+     * distribuição de clientes do dashboard. Estados nulos (endereço ainda
+     * não sincronizado, ver SyncOrderAddressesJob) ficam fora do agrupamento.
+     *
+     * @return array<string, mixed>
+     */
+    public function customersByState(Account $account, ?CarbonImmutable $startDate, ?CarbonImmutable $endDate): array
+    {
+        $query = Order::where('account_id', $account->id)->whereNotNull('buyer_state');
+        $this->applyDateRange($query, $startDate, $endDate);
+
+        $byState = $query->selectRaw('buyer_state, count(*) as total')
+            ->groupBy('buyer_state')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row) => ['state' => $row->buyer_state, 'total' => (int) $row->total]);
+
+        return ['data' => $byState];
+    }
+
+    /**
      * @param  Builder<Order>  $query
      */
     private function applyDateRange($query, ?CarbonImmutable $startDate, ?CarbonImmutable $endDate): void

@@ -38,17 +38,17 @@ title-xxl..title-xsm (escala tipográfica de títulos, 18px a 44px)
 ## Sprint 1 — Fundação (Tailwind + Shell)
 
 - [X] Instalar Tailwind CSS v4 (`tailwindcss` + `@tailwindcss/postcss`) no frontend.
-- [ ] Configurar `postcss.config.mjs` e importar Tailwind em `frontend/src/app/globals.css` (`@import "tailwindcss"`).
-- [ ] Portar a paleta de cores e a escala tipográfica do TailAdmin pro `@theme` do Tailwind v4 **dentro de** `frontend/src/styles/colors.css` (substitui as 9 variáveis antigas pela paleta nova, mas continua sendo o único arquivo com cor — tudo o mais chama via variável/classe Tailwind gerada a partir dele, nunca hex direto).
-- [ ] `frontend/src/components/layout/Sidebar.tsx` — recriado a partir do `partials/sidebar.html` do template (mesma paleta/classes: `bg-black dark:bg-boxdark`, `text-bodydark1`, `hover:bg-graydark dark:hover:bg-meta-4`), com os 6 itens reais do Scrap Dash (Dashboard, Produtos, Pedidos, Financeiro, Mensagens, Funcionários) — sem os itens de demonstração do template. Badge de mensagens não lidas (`useConversations`) mantido, mesmo padrão visual do badge `bg-primary` do template. Links de módulo continuam escondidos conforme `account.permissions`, igual ao `NavBar` atual.
-- [ ] `frontend/src/components/layout/Header.tsx` — barra superior fixa, hamburger pra colapsar a sidebar no mobile, botão de alternância claro/escuro (switch com ícone de sol/lua, mesmo padrão visual do template), dropdown de usuário (nome/e-mail/Sair, reaproveitando `logout()` do `AuthContext`). Sem os dropdowns de notificação/chat genéricos do template (dado fake, sem funcionalidade real) nem busca (sem caso de uso hoje).
-- [ ] Alternância de tema: `useState` + `localStorage` (substitui o `x-data`/`$persist` do Alpine no template) — aplica/remove a classe `dark` na tag `<html>`; enquanto o usuário não escolher nada, respeita `prefers-color-scheme` (primeira visita = automático, depois de escolher = fixo na preferência salva).
-- [ ] `frontend/src/app/(app)/layout.tsx` — route group envolvendo as páginas autenticadas com `Sidebar` + `Header` + `SessionGuard`, absorvendo o redirect de "não autenticado" hoje duplicado em cada página.
-- [ ] Mover `dashboard/`, `products/`, `orders/`, `orders/[id]/`, `financial/`, `messages/`, `employees/` pra dentro de `app/(app)/` (só reorganização de pasta nesta sprint — conteúdo interno continua com CSS Module até a Sprint 2/3/4).
-- [ ] Reskin de `/login` e `/register` — card dividido (ilustração + formulário, ilustração escondida no mobile) inspirado em `signin.html`/`signup.html` do template, como página standalone (sem sidebar/header). Reaproveita a lógica de formulário já existente (`useAuth().login/register`, `GoogleSignInButton`).
-- [ ] Branding: logo/nome "Scrap Dash" no lugar do logo do TailAdmin.
+- [X] Configurar `postcss.config.mjs` e importar Tailwind em `frontend/src/app/globals.css` (`@import "tailwindcss"`) — inclui `@custom-variant dark (&:where(.dark, .dark *))` pra alternância manual por classe.
+- [X] Portar a paleta de cores e a escala tipográfica do TailAdmin pro `@theme` do Tailwind v4 **dentro de** `frontend/src/styles/colors.css` — paleta nova adicionada; as 9 variáveis antigas (`--colorNN`) ficaram junto por enquanto (ainda usadas pelas telas não migradas), remoção na Sprint 5.
+- [X] `frontend/src/components/layout/Sidebar.tsx` — recriado com a paleta/classes do TailAdmin (`bg-black dark:bg-boxdark`, `text-bodydark1`, `hover:bg-graydark dark:hover:bg-meta-4`), 6 itens reais do Scrap Dash, badge de mensagens não lidas (`useConversations`) mantido, links de módulo escondidos conforme `account.permissions`.
+- [X] `frontend/src/components/layout/Header.tsx` — barra superior fixa, hamburger, alternância claro/escuro (sol/lua), dropdown de usuário (nome/e-mail/Sair). Sem notificação/chat/busca fake.
+- [X] Alternância de tema (`frontend/src/hooks/useTheme.ts`, `useState` + `localStorage`) — aplica/remove `dark` na tag `<html>`; respeita `prefers-color-scheme` até o usuário escolher. Script inline no `layout.tsx` raiz evita flash claro→escuro no load.
+- [X] `frontend/src/app/(app)/layout.tsx` — route group com `Sidebar` + `Header` + `SessionGuard`, redirect de "não autenticado" centralizado.
+- [X] Mover `dashboard/`, `products/`, `orders/`, `orders/[id]/`, `financial/`, `messages/`, `employees/` pra dentro de `app/(app)/` — além da reorganização, o `NavBar`/`SessionGuard`/redirect duplicados de cada página foram removidos (a nova shell já cobre isso); o miolo de cada tela continua com o CSS Module antigo, a mover na Sprint 2/3/4.
+- [X] Reskin de `/login` e `/register` — card dividido (ilustração + formulário, ilustração escondida abaixo de `xl`), standalone, reaproveitando `useAuth().login/register` e `GoogleSignInButton`.
+- [X] Branding: "Scrap Dash" (marca "SD" + nome) no lugar do logo do TailAdmin — sidebar, login e register.
 
-**Entregável:** fundação Tailwind no ar — shell (sidebar+header) funcionando em volta das telas existentes (ainda com visual antigo por dentro) e `/login`/`/register` já 100% no novo visual. `tsc`/`lint`/`test`/`build` limpos.
+**Entregável:** fundação Tailwind no ar — shell (sidebar+header) funcionando em volta das telas existentes (ainda com visual antigo por dentro) e `/login`/`/register` já 100% no novo visual. `tsc`/`lint`/`test`/`build` limpos (validado). **Não validado:** conferência visual em navegador real (sem ferramenta de screenshot disponível nesta sessão) — só verificado via HTML/CSS renderizados por `curl` no dev server. Peço que você confira visualmente antes de eu seguir pra Sprint 2.
 
 **Ponto de checagem:** parar aqui e confirmar com você que a direção visual (sidebar, paleta, tela de login, claro/escuro) está de acordo antes de reskinar as demais telas.
 
@@ -58,17 +58,18 @@ title-xxl..title-xsm (escala tipográfica de títulos, 18px a 44px)
 
 Separada das demais telas de dados porque envolve trabalho novo de verdade (não só reskin) e um risco técnico a validar cedo (mapa).
 
-- [ ] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/revenue-series` — receita agregada por dia dentro do período filtrado. Hoje `DashboardService` só devolve o total somado do período; sem série diária não dá pra desenhar tendência nenhuma.
-- [ ] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/customers-by-state` — contagem de pedidos agrupados por `orders.buyer_state` (dado já sincronizado desde o Sprint 6 do `PLAN.md` via `SyncOrderAddressesJob`, só falta agregar por estado).
-- [ ] Instalar `apexcharts` + `react-apexcharts` (wrapper oficial React — o template usa a lib vanilla via Alpine, aqui integra como componente de verdade).
-- [ ] Instalar `jsvectormap` — **risco a validar antes de prometer prazo**: não existe wrapper React maduro/compatível com React 19 pra essa lib (vai precisar integrar a versão vanilla via `useRef`/`useEffect` direto, sem wrapper); confirmar se o pacote traz um mapa dos estados do Brasil pronto ou se precisa de um GeoJSON à parte antes de seguir.
-- [ ] Dashboard — cards de KPI no estilo do template (`cards.html`).
-- [ ] Dashboard — gráfico de receita ao longo do período (linha/área), usando o endpoint novo de série diária.
-- [ ] Dashboard — gráficos de pizza/donut para pedidos por status e pagamentos por status (dado que já existe hoje — `orders.by_status`/`payments.by_status` —, sem endpoint novo).
-- [ ] Dashboard — mapa de distribuição de clientes por estado, usando o endpoint novo.
-- [ ] Alertas continuam como banner (sem mudança de comportamento, só visual).
+- [X] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/revenue-series` — receita diária (pedidos pagos) dentro do período; sem período informado, últimos 30 dias (all-time não cabe num gráfico legível). Testado com dados reais da conta 4 (30 dias, valores batendo).
+- [X] **Backend:** novo endpoint `GET /accounts/{account}/dashboard/customers-by-state` — contagem de pedidos agrupados por `orders.buyer_state`, ignorando pedidos com endereço ainda não sincronizado. Testado com dados reais (24 estados distintos retornados).
+- [X] 4 testes automatizados novos (`DashboardControllerTest`) cobrindo série com gaps preenchidos, período explícito, agrupamento por estado e autorização (`403` pra quem não é dono da conta). Suíte completa do backend: 26/26 passando.
+- [X] Instalar `apexcharts` + `react-apexcharts` (wrapper oficial React).
+- [X] **Mapa — risco do plano se confirmou**: `jsvectormap` só traz o mapa mundial (`world.js`/`world-merc.js`), nenhum dado de estados do Brasil embutido, e não achei pacote de mapa do Brasil compatível com essa lib especificamente. **Decisão:** troquei por `@svg-maps/brazil` (dataset de paths SVG por estado, sem jQuery, sem dependência nenhuma) + um componente React nativo (`BrazilMap.tsx`) que colore cada estado por intensidade (opacidade) proporcional ao total de pedidos — mais simples, mais robusto pro React 19 e sem gambiarra de `useRef`/lib imperativa. `jsvectormap` foi desinstalado. Precisou de um utilitário (`utils/brazilStates.ts`) pra converter o nome completo do estado que o Mercado Livre devolve (ex. "São Paulo") pra sigla (ex. "sp") — validado contra os 24 estados reais retornados pela conta de teste, 100% de acerto.
+- [X] Dashboard — cards de KPI reskinados (`KpiCard.tsx`, `AccountSelector.tsx`, `DateRangeFilter.tsx` — componentes compartilhados, então o Financeiro também herda esse visual antes da Sprint 3 chegar lá).
+- [X] Dashboard — gráfico de receita ao longo do período (área, ApexCharts), usando o endpoint novo de série diária.
+- [X] Dashboard — donuts de pedidos por status e pagamentos por status (dado que já existia, sem endpoint novo).
+- [X] Dashboard — mapa de distribuição de clientes por estado (ver decisão acima).
+- [X] Alertas continuam como banner (sem mudança de comportamento, só visual).
 
-**Entregável:** dashboard com gráficos e mapa reais, dados de produção. Validado no navegador (claro/escuro) com a conta real. `tsc`/`lint`/`test`/`build` limpos.
+**Entregável:** dashboard com gráficos e mapa reais, dados de produção (conta 4). `tsc`/`lint`/`test`/`build` limpos (frontend e backend) — validado via `curl` autenticado contra os endpoints novos e contra o dev server, não em navegador real (sem ferramenta de screenshot nesta sessão). Peço que você confira visualmente antes de eu seguir pra Sprint 3.
 
 ---
 
