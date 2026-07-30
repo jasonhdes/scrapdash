@@ -1,0 +1,8 @@
+# Vendor do composer.json da raiz (só orquestra `composer dev`, sem
+# dependências reais, mas o Composer ainda cria essa pasta).
+/vendor
+
+# Configuração local do Claude Code (allowlist de permissões específica
+# desta máquina — caminhos do XAMPP hardcoded). O resto de .claude/
+# (skills) é compartilhado do projeto e continua versionado.
+.claude/settings.json
