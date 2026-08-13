@@ -1,21 +1,20 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Ubuntu } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const ubuntu = Ubuntu({
+  variable: '--font-ubuntu',
   subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+  weight: ['300', '400', '500', '700'],
 });
 
 export const metadata: Metadata = {
   title: 'Scrap Dash',
   description: 'Gestão de vendas no Mercado Livre',
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({
@@ -24,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="pt-BR" className={ubuntu.variable}>
       <head>
         <script
           // Aplica o tema antes do React hidratar, pra não piscar claro->escuro.
