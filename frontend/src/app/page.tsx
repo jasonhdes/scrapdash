@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -24,11 +25,17 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-whiten px-4 dark:bg-boxdark-2">
+    <div className="flex min-h-screen items-center justify-center bg-whiten px-4 dark:bg-boxdark-2 sm:px-6 lg:px-8">
       <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-sm border border-stroke bg-white px-8 py-10 text-center shadow-default dark:border-strokedark dark:bg-boxdark">
-        <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-lg font-bold text-white">
-          SD
-        </span>
+        <div className="h-20 w-20 overflow-hidden rounded-lg">
+          <Image
+            src="/favicon.png"
+            alt="Scrap Dash"
+            width={80}
+            height={80}
+            className="h-full w-full object-cover"
+          />
+        </div>
         <h1 className="text-title-sm font-bold text-black dark:text-white">Scrap Dash</h1>
         <p className="text-sm text-body dark:text-bodydark">Gestão de vendas no Mercado Livre.</p>
         <Link
