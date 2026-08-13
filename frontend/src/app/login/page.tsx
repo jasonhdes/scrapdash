@@ -46,12 +46,12 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-whiten px-4 py-10 dark:bg-boxdark-2 sm:px-6 lg:px-8">
       <div className="flex w-full max-w-4xl overflow-hidden rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
         <div className="hidden w-full flex-col justify-center items-center bg-primary px-10 py-16 text-white xl:flex xl:w-1/2">
-          <div className="mb-4 h-12 w-12 overflow-hidden rounded-lg">
+          <div className="mb-4 h-20 w-20 overflow-hidden rounded-lg">
             <Image
               src="/favicon.png"
               alt="Scrap Dash"
-              width={48}
-              height={48}
+              width={80}
+              height={80}
               className="h-full w-full object-cover"
             />
           </div>
