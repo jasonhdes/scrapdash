@@ -6,7 +6,7 @@ interface DateRangeFilterProps {
 }
 
 const inputClass =
-  'rounded-lg border border-stroke bg-transparent px-4 py-2 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
+  'rounded-lg border border-stroke bg-transparent pl-[29.2px] pr-[19.2px] py-[0.6rem] text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
 
 export function DateRangeFilter({ startDate, endDate, onChange, onClear }: DateRangeFilterProps) {
   return (
