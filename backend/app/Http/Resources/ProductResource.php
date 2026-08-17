@@ -21,6 +21,7 @@ class ProductResource extends JsonResource
             'currency' => $this->currency,
             'available_quantity' => $this->available_quantity,
             'status' => $this->status,
+            'logistic_type' => $this->logistic_type,
             'permalink' => $this->permalink,
             'thumbnail' => $this->thumbnail,
             'synced_at' => $this->synced_at,

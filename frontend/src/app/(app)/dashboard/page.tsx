@@ -17,10 +17,18 @@ import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { StatusDonutChart } from '@/components/dashboard/StatusDonutChart';
 import { BrazilMap } from '@/components/dashboard/BrazilMap';
 
-const ORDER_STATUS_LABELS: Record<string, string> = {
-  paid: 'Pago',
-  cancelled: 'Cancelado',
-  partially_refunded: 'Parcialmente reembolsado',
+const ORDER_GROUP_LABELS: Record<string, string> = {
+  completed: 'Finalizado',
+  in_transit: 'A caminho',
+  returned: 'Devolvido',
+  cancelled: 'Cancelados',
+};
+
+const ORDER_GROUP_COLORS: Record<string, string> = {
+  completed: '#219653',
+  in_transit: '#259AE6',
+  returned: '#D34053',
+  cancelled: '#FFBA00',
 };
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
@@ -29,6 +37,14 @@ const PAYMENT_STATUS_LABELS: Record<string, string> = {
   rejected: 'Rejeitado',
   cancelled: 'Cancelado',
   in_mediation: 'Em mediação',
+};
+
+const PAYMENT_STATUS_COLORS: Record<string, string> = {
+  approved: '#219653',
+  refunded: '#D34053',
+  rejected: '#8B5CF6',
+  cancelled: '#FFBA00',
+  in_mediation: '#FFA70B',
 };
 
 const DATE_RANGE_STORAGE_KEY = 'scrapdash_dashboard_date_range';
@@ -62,6 +78,7 @@ function DashboardContent() {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
   const { data: dashboard, isLoading: dashboardLoading } = useDashboard(
     selectedAccountId,
@@ -131,12 +148,14 @@ function DashboardContent() {
   const isBusy = !!selectedAccount && connectingId === selectedAccount.id;
 
   const kpiGrid = dashboard ? (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
       <KpiCard
         label="Receita"
         value={formatCurrency(dashboard.revenue.total, dashboard.revenue.currency)}
       />
       <KpiCard label="Pedidos" value={dashboard.orders.total} />
+      <KpiCard label="Enviados" value={dashboard.orders.shipped} />
+      <KpiCard label="Devolvidos" value={dashboard.orders.returned} />
       <KpiCard
         label="Produtos"
         value={dashboard.products.total}
@@ -191,24 +210,35 @@ function DashboardContent() {
 
       {dashboard && dashboard.alerts.length > 0 && (
         <div className="flex flex-col gap-2">
-          {dashboard.alerts.map((alert, i) =>
-            alert.type === 'unread_messages' ? (
-              <Link
-                key={i}
-                href="/messages"
-                className="rounded-lg border border-warning/30 bg-warning/10 py-3 pl-[29.2px] pr-[19.2px] text-sm text-black dark:text-white"
-              >
-                {alert.message}
-              </Link>
-            ) : (
+          {dashboard.alerts.map((alert, i) => {
+            const key = `${alert.type}:${alert.message}`;
+            if (dismissedAlerts.has(key)) return null;
+
+            return (
               <div
                 key={i}
-                className="rounded-lg border border-warning/30 bg-warning/10 py-3 pl-[29.2px] pr-[19.2px] text-sm text-black dark:text-white"
+                style={{ paddingLeft: 10, paddingRight: 10 }}
+                className="flex items-center justify-between gap-3 rounded-lg border border-warning/30 bg-warning/10 py-3 text-sm text-black dark:text-white"
               >
-                {alert.message}
+                {alert.type === 'unread_messages' ? (
+                  <Link href="/messages" className="flex-1">
+                    {alert.message}
+                  </Link>
+                ) : (
+                  <span className="flex-1">{alert.message}</span>
+                )}
+                <button
+                  onClick={() => setDismissedAlerts((current) => new Set(current).add(key))}
+                  aria-label="Fechar alerta"
+                  className="shrink-0 text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
+                  </svg>
+                </button>
               </div>
-            ),
-          )}
+            );
+          })}
         </div>
       )}
 
@@ -221,7 +251,8 @@ function DashboardContent() {
             <button
               disabled={isBusy}
               onClick={() => handleConnect(selectedAccount)}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              style={{ paddingLeft: 5, paddingRight: 5 }}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-opacity-90 disabled:opacity-60"
             >
               {isBusy ? 'Atualizando...' : 'Atualizar'}
             </button>
@@ -234,7 +265,10 @@ function DashboardContent() {
       {dashboard && !needsRefresh && (
         <>
           {revenueSeries && revenueSeries.series.length > 0 && (
-            <div className="rounded-sm border border-stroke bg-white px-5 pb-5 pt-7.5 shadow-1 dark:border-strokedark dark:bg-boxdark sm:px-7.5">
+            <div
+              style={{ paddingLeft: 20 }}
+              className="rounded-sm border border-stroke bg-white px-5 pb-5 pt-7.5 shadow-1 dark:border-strokedark dark:bg-boxdark sm:px-7.5"
+            >
               <h3 className="mb-4 text-lg font-semibold text-black dark:text-white">
                 Receita no período
               </h3>
@@ -245,17 +279,24 @@ function DashboardContent() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <StatusDonutChart
               title="Pedidos por status"
-              byStatus={dashboard.orders.by_status}
-              labels={ORDER_STATUS_LABELS}
+              byStatus={dashboard.orders.by_group}
+              labels={ORDER_GROUP_LABELS}
+              statusColors={ORDER_GROUP_COLORS}
+              total={dashboard.orders.total}
+              totalLabel="Total de pedidos"
             />
             <StatusDonutChart
               title="Pagamentos por status"
               byStatus={dashboard.payments.by_status}
               labels={PAYMENT_STATUS_LABELS}
+              statusColors={PAYMENT_STATUS_COLORS}
             />
           </div>
 
-          <div className="rounded-sm border border-stroke bg-white px-5 pb-5 pt-7.5 shadow-1 dark:border-strokedark dark:bg-boxdark sm:px-7.5">
+          <div
+            style={{ paddingLeft: 20 }}
+            className="rounded-sm border border-stroke bg-white px-5 pb-5 pt-7.5 shadow-1 dark:border-strokedark dark:bg-boxdark sm:px-7.5"
+          >
             <h3 className="mb-4 text-lg font-semibold text-black dark:text-white">
               Clientes por estado
             </h3>

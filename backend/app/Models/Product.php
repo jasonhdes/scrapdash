@@ -19,6 +19,7 @@ class Product extends Model
         'currency',
         'available_quantity',
         'status',
+        'logistic_type',
         'permalink',
         'thumbnail',
         'synced_at',

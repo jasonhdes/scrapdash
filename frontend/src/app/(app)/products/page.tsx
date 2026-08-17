@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
 import { listProducts } from '@/services/products';
+import type { ProductSortColumn } from '@/services/products';
 import type { Product } from '@/types/product';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
 import { Pagination } from '@/components/shared/Pagination';
@@ -17,8 +18,29 @@ const STATUS_OPTIONS = [
   { value: 'inactive', label: 'Inativo' },
 ];
 
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Ativo',
+  paused: 'Pausado',
+  under_review: 'Em revisão',
+  inactive: 'Inativo',
+};
+
+const DEPOSIT_LABELS: Record<string, string> = {
+  full: 'FULL',
+  loja: 'LOJA',
+};
+
+const DEPOSIT_COLORS: Record<string, string> = {
+  full: 'bg-success/10 text-success',
+};
+
+function depositKey(logisticType: string | null) {
+  return logisticType === 'fulfillment' ? 'full' : 'loja';
+}
+
 const inputClass =
-  'rounded-lg border border-stroke bg-transparent px-4 py-2 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
+  'rounded-lg border border-stroke bg-transparent py-2 pr-4 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
+const inputStyle = { paddingLeft: 16 };
 
 function formatCurrency(value: number, currency: string | null) {
   return new Intl.NumberFormat('pt-BR', {
@@ -34,6 +56,8 @@ export default function ProductsPage() {
   const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [sortBy, setSortBy] = useState<ProductSortColumn | undefined>(undefined);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -52,17 +76,61 @@ export default function ProductsPage() {
     if (!selectedAccountId || !token) return;
     setIsLoading(true);
     try {
-      const response = await listProducts(selectedAccountId, token, { status, search, page });
+      const response = await listProducts(selectedAccountId, token, {
+        status,
+        search,
+        sortBy,
+        sortDir,
+        page,
+      });
       setProducts(response.data);
       setMeta(response.meta);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedAccountId, token, status, search, page]);
+  }, [selectedAccountId, token, status, search, sortBy, sortDir, page]);
 
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  function handleSort(column: ProductSortColumn) {
+    if (sortBy === column) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(column);
+      setSortDir('asc');
+    }
+    setPage(1);
+  }
+
+  function sortIndicator(column: ProductSortColumn) {
+    if (sortBy !== column) return '';
+    return sortDir === 'asc' ? ' ▲' : ' ▼';
+  }
+
+  function SortableHeader({
+    column,
+    label,
+    align = 'left',
+  }: {
+    column: ProductSortColumn;
+    label: string;
+    align?: 'left' | 'center';
+  }) {
+    return (
+      <th className="px-4 py-4 font-medium text-black dark:text-white">
+        <button
+          type="button"
+          onClick={() => handleSort(column)}
+          className={`flex items-center gap-1 font-medium hover:text-primary ${align === 'center' ? 'mx-auto' : ''}`}
+        >
+          {label}
+          {sortIndicator(column)}
+        </button>
+      </th>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -91,6 +159,7 @@ export default function ProductsPage() {
             placeholder="Título do produto"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
+            style={inputStyle}
             className={inputClass}
           />
         </div>
@@ -105,6 +174,7 @@ export default function ProductsPage() {
               setStatus(e.target.value);
               setPage(1);
             }}
+            style={inputStyle}
             className={inputClass}
           >
             {STATUS_OPTIONS.map((option) => (
@@ -122,15 +192,19 @@ export default function ProductsPage() {
         <p className="text-sm text-body dark:text-bodydark">Nenhum produto encontrado.</p>
       ) : (
         <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
-          <table className="w-full table-auto">
+          <table className="w-full table-auto border-separate border-spacing-x-3 border-spacing-y-0">
             <thead>
               <tr className="bg-gray-2 text-left dark:bg-meta-4">
                 <th className="w-16 px-4 py-4"></th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">Nome</th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">SKU</th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">Preço</th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">Estoque</th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">Status</th>
+                <SortableHeader column="title" label="Nome" />
+                <th className="px-4 py-4 font-medium text-black dark:text-white">Cód. anúncio</th>
+                <th className="px-4 py-4 text-center font-medium text-black dark:text-white">
+                  Depósito
+                </th>
+                <SortableHeader column="seller_sku" label="SKU" align="center" />
+                <SortableHeader column="price" label="Preço" />
+                <SortableHeader column="available_quantity" label="Estoque" align="center" />
+                <SortableHeader column="status" label="Status" align="center" />
               </tr>
             </thead>
             <tbody>
@@ -157,16 +231,26 @@ export default function ProductsPage() {
                     </a>
                   </td>
                   <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                    {product.mercadolivre_item_id}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-center dark:border-strokedark">
+                    <StatusBadge
+                      status={depositKey(product.logistic_type)}
+                      labels={DEPOSIT_LABELS}
+                      colors={DEPOSIT_COLORS}
+                    />
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-center text-body dark:border-strokedark dark:text-bodydark">
                     {product.seller_sku ?? '—'}
                   </td>
                   <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
                     {formatCurrency(product.price, product.currency)}
                   </td>
-                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                  <td className="border-b border-stroke px-4 py-3 text-center text-black dark:border-strokedark dark:text-white">
                     {product.available_quantity}
                   </td>
-                  <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
-                    <StatusBadge status={product.status} />
+                  <td className="border-b border-stroke px-4 py-3 text-center dark:border-strokedark">
+                    <StatusBadge status={product.status} labels={STATUS_LABELS} />
                   </td>
                 </tr>
               ))}

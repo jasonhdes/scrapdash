@@ -7,7 +7,13 @@ export interface DashboardData {
   account: { id: number; name: string };
   period: { start_date: string | null; end_date: string | null };
   revenue: { total: number; currency: string | null };
-  orders: { total: number; by_status: Record<string, number> };
+  orders: {
+    total: number;
+    by_status: Record<string, number>;
+    shipped: number;
+    returned: number;
+    by_group: { completed: number; in_transit: number; returned: number; cancelled: number };
+  };
   products: { total: number; active: number };
   payments: { by_status: Record<string, number> };
   messages: { total: number; received: number };
