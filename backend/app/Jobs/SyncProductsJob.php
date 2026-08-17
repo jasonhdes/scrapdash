@@ -46,6 +46,7 @@ class SyncProductsJob implements ShouldQueue
                         'currency' => $item['currency_id'] ?? null,
                         'available_quantity' => $item['available_quantity'] ?? 0,
                         'status' => $item['status'] ?? null,
+                        'logistic_type' => $item['shipping']['logistic_type'] ?? null,
                         'permalink' => $item['permalink'] ?? null,
                         'thumbnail' => $item['thumbnail'] ?? null,
                         'synced_at' => now(),

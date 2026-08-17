@@ -159,7 +159,8 @@ export default function MessagesPage() {
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   disabled={isSending}
-                  className="flex-1 resize-none rounded-lg border border-stroke bg-transparent px-3 py-2 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
+                  style={{ paddingLeft: 12 }}
+                  className="flex-1 resize-none rounded-lg border border-stroke bg-transparent py-2 pr-3 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
                 />
                 <button
                   type="submit"

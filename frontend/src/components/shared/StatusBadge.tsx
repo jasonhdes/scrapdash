@@ -15,14 +15,20 @@ const STATUS_COLORS: Record<string, string> = {
 
 const DEFAULT_COLOR = 'bg-bodydark/20 text-bodydark2 dark:text-bodydark';
 
-export function StatusBadge({ status }: { status: string | null }) {
+interface StatusBadgeProps {
+  status: string | null;
+  labels?: Record<string, string>;
+  colors?: Record<string, string>;
+}
+
+export function StatusBadge({ status, labels, colors }: StatusBadgeProps) {
   if (!status) return <>—</>;
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[status] ?? DEFAULT_COLOR}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${colors?.[status] ?? STATUS_COLORS[status] ?? DEFAULT_COLOR}`}
     >
-      {status}
+      {labels?.[status] ?? status}
     </span>
   );
 }

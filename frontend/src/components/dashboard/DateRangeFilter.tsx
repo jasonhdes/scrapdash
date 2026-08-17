@@ -6,7 +6,8 @@ interface DateRangeFilterProps {
 }
 
 const inputClass =
-  'rounded-lg border border-stroke bg-transparent pl-[29.2px] pr-[19.2px] py-[0.6rem] text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
+  'rounded-lg border border-stroke bg-transparent py-2 pr-4 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
+const inputPaddingLeft = { paddingLeft: 16 };
 
 export function DateRangeFilter({ startDate, endDate, onChange, onClear }: DateRangeFilterProps) {
   return (
@@ -21,6 +22,7 @@ export function DateRangeFilter({ startDate, endDate, onChange, onClear }: DateR
           value={startDate}
           max={endDate || undefined}
           onChange={(e) => onChange({ startDate: e.target.value, endDate })}
+          style={inputPaddingLeft}
           className={inputClass}
         />
       </div>
@@ -34,11 +36,16 @@ export function DateRangeFilter({ startDate, endDate, onChange, onClear }: DateR
           value={endDate}
           min={startDate || undefined}
           onChange={(e) => onChange({ startDate, endDate: e.target.value })}
+          style={inputPaddingLeft}
           className={inputClass}
         />
       </div>
       {(startDate || endDate) && (
-        <button onClick={onClear} className="text-sm font-medium text-primary">
+        <button
+          onClick={onClear}
+          style={{ paddingLeft: 5, paddingRight: 5 }}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-opacity-90"
+        >
           Limpar período
         </button>
       )}

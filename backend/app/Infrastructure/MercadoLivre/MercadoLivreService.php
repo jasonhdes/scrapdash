@@ -243,7 +243,7 @@ class MercadoLivreService
     }
 
     /**
-     * @return array{city: ?string, state: ?string}
+     * @return array{city: ?string, state: ?string, status: ?string, substatus: ?string}
      */
     public function getShipmentAddress(Account $account, string $shippingId): array
     {
@@ -252,7 +252,7 @@ class MercadoLivreService
         );
 
         if ($response->status() === 404) {
-            return ['city' => null, 'state' => null];
+            return ['city' => null, 'state' => null, 'status' => null, 'substatus' => null];
         }
 
         $this->assertSuccessful($response, 'Falha ao buscar o endereço de entrega no Mercado Livre');
@@ -260,6 +260,8 @@ class MercadoLivreService
         return [
             'city' => $response->json('receiver_address.city.name'),
             'state' => $response->json('receiver_address.state.name'),
+            'status' => $response->json('status'),
+            'substatus' => $response->json('substatus'),
         ];
     }
 

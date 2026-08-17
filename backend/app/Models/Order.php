@@ -17,6 +17,9 @@ class Order extends Model
         'mercadolivre_order_id',
         'pack_id',
         'shipping_id',
+        'shipping_status',
+        'shipping_substatus',
+        'shipping_status_synced_at',
         'status',
         'total_amount',
         'currency',
@@ -37,6 +40,7 @@ class Order extends Model
             'processed_at' => 'datetime',
             'synced_at' => 'datetime',
             'buyer_address_synced_at' => 'datetime',
+            'shipping_status_synced_at' => 'datetime',
         ];
     }
 

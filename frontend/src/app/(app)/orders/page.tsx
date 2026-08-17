@@ -42,7 +42,8 @@ const EMPTY_TEXT_FILTERS = {
 };
 
 const inputClass =
-  'rounded-lg border border-stroke bg-transparent px-4 py-2 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
+  'rounded-lg border border-stroke bg-transparent py-2 pr-4 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
+const inputStyle = { paddingLeft: 16 };
 const buttonClass =
   'rounded-lg border border-stroke px-4 py-2 text-sm font-medium text-black dark:border-strokedark dark:text-white';
 
@@ -224,6 +225,7 @@ export default function OrdersPage() {
             placeholder="Número do pedido"
             value={textFiltersInput.orderNumber}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, orderNumber: e.target.value }))}
+            style={inputStyle}
             className={inputClass}
           />
         </div>
@@ -237,6 +239,7 @@ export default function OrdersPage() {
             placeholder="Apelido do comprador"
             value={textFiltersInput.buyer}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, buyer: e.target.value }))}
+            style={inputStyle}
             className={inputClass}
           />
         </div>
@@ -250,6 +253,7 @@ export default function OrdersPage() {
             placeholder="Ex.: São Paulo"
             value={textFiltersInput.location}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, location: e.target.value }))}
+            style={inputStyle}
             className={inputClass}
           />
         </div>
@@ -263,6 +267,7 @@ export default function OrdersPage() {
             placeholder="Nome do produto"
             value={textFiltersInput.product}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, product: e.target.value }))}
+            style={inputStyle}
             className={inputClass}
           />
         </div>
@@ -279,6 +284,7 @@ export default function OrdersPage() {
               setSelectedSkus(Array.from(e.target.selectedOptions, (o) => o.value));
               setPage(1);
             }}
+            style={inputStyle}
             className={`${inputClass} min-w-48`}
           >
             {skuOptions.map((option) => (
@@ -300,6 +306,7 @@ export default function OrdersPage() {
             placeholder="0,00"
             value={textFiltersInput.minTotal}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, minTotal: e.target.value }))}
+            style={inputStyle}
             className={inputClass}
           />
         </div>
@@ -315,6 +322,7 @@ export default function OrdersPage() {
             placeholder="0,00"
             value={textFiltersInput.maxTotal}
             onChange={(e) => setTextFiltersInput((f) => ({ ...f, maxTotal: e.target.value }))}
+            style={inputStyle}
             className={inputClass}
           />
         </div>
@@ -329,6 +337,7 @@ export default function OrdersPage() {
               setStatus(e.target.value);
               setPage(1);
             }}
+            style={inputStyle}
             className={inputClass}
           >
             {STATUS_OPTIONS.map((option) => (
@@ -349,6 +358,7 @@ export default function OrdersPage() {
               setReleased(e.target.value);
               setPage(1);
             }}
+            style={inputStyle}
             className={inputClass}
           >
             {RELEASED_OPTIONS.map((option) => (
@@ -369,6 +379,7 @@ export default function OrdersPage() {
               setProcessed(e.target.value);
               setPage(1);
             }}
+            style={inputStyle}
             className={inputClass}
           >
             {PROCESSED_OPTIONS.map((option) => (

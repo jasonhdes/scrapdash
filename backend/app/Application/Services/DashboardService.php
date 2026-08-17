@@ -48,6 +48,33 @@ class DashboardService
             ->groupBy('status')
             ->pluck('total', 'status');
 
+        // "Enviado" cobre tanto o pedido já entregue quanto o que só saiu
+        // pro transporte; "devolvido" exige pedido cancelado (status) com o
+        // envio já tendo saído pra entrega — seja porque chegou a ser
+        // entregue e o cliente devolveu depois (delivered), seja porque
+        // voltou pro remetente sem ser entregue (not_delivered).
+        $shippedTotal = (clone $ordersQuery)->whereIn('shipping_status', ['shipped', 'delivered'])->count();
+        $returnedTotal = (clone $ordersQuery)
+            ->where('status', 'cancelled')
+            ->whereIn('shipping_status', ['delivered', 'not_delivered'])
+            ->count();
+
+        // Agrupamento pro gráfico "Pedidos por status": não é o status bruto
+        // do pedido, e sim o status combinado com o do envio. Usa subtração
+        // em vez de comparar `shipping_status != 'delivered'` direto pra não
+        // cair na pegadinha do NULL em SQL (pedido cujo envio ainda não foi
+        // sincronizado não bateria nem com `= delivered` nem com
+        // `!= delivered`).
+        $paidLikeTotal = (clone $ordersQuery)->whereIn('status', ['paid', 'partially_refunded'])->count();
+        $completedTotal = (clone $ordersQuery)
+            ->whereIn('status', ['paid', 'partially_refunded'])
+            ->where('shipping_status', 'delivered')
+            ->count();
+        $inTransitTotal = $paidLikeTotal - $completedTotal;
+
+        $cancelledTotal = (clone $ordersQuery)->where('status', 'cancelled')->count();
+        $cancelledOnlyTotal = $cancelledTotal - $returnedTotal;
+
         $revenue = (clone $ordersQuery)->where('status', 'paid')->sum('total_amount');
 
         $currency = (clone $ordersQuery)->value('currency');
@@ -85,6 +112,14 @@ class DashboardService
             'orders' => [
                 'total' => (int) $ordersByStatus->sum(),
                 'by_status' => $ordersByStatus,
+                'shipped' => $shippedTotal,
+                'returned' => $returnedTotal,
+                'by_group' => [
+                    'completed' => $completedTotal,
+                    'in_transit' => $inTransitTotal,
+                    'returned' => $returnedTotal,
+                    'cancelled' => $cancelledOnlyTotal,
+                ],
             ],
             'products' => [
                 'total' => $productsTotal,

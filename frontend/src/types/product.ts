@@ -7,6 +7,7 @@ export interface Product {
   currency: string | null;
   available_quantity: number;
   status: string | null;
+  logistic_type: string | null;
   permalink: string | null;
   thumbnail: string | null;
   synced_at: string | null;
