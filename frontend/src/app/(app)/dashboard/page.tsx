@@ -154,9 +154,6 @@ function DashboardContent() {
           <h1 className="text-title-md font-bold text-black dark:text-white">
             Bem-vindo, {user.name}
           </h1>
-          <p className="mt-1 text-sm text-body dark:text-bodydark">
-            {user.email} · perfil: {user.role}
-          </p>
         </div>
         <AccountSelector
           accounts={accounts}
@@ -199,14 +196,14 @@ function DashboardContent() {
               <Link
                 key={i}
                 href="/messages"
-                className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-black dark:text-white"
+                className="rounded-lg border border-warning/30 bg-warning/10 py-3 pl-[29.2px] pr-[19.2px] text-sm text-black dark:text-white"
               >
                 {alert.message}
               </Link>
             ) : (
               <div
                 key={i}
-                className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-black dark:text-white"
+                className="rounded-lg border border-warning/30 bg-warning/10 py-3 pl-[29.2px] pr-[19.2px] text-sm text-black dark:text-white"
               >
                 {alert.message}
               </div>

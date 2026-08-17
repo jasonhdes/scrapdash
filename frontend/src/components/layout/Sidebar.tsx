@@ -1,10 +1,12 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useConversations } from '@/hooks/useConversations';
+import { useTheme } from '@/hooks/useTheme';
 import type { PermissionModule } from '@/types/employee';
 
 type NavItem = {
@@ -124,6 +126,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const { user, token } = useAuth();
   const { selectedAccount } = useAccounts(token);
   const { unreadTotal } = useConversations(selectedAccount?.id ?? null, token);
+  const { theme } = useTheme();
 
   const links = LINKS.filter((link) => {
     if (!link.module) return true;
@@ -146,18 +149,26 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden bg-black duration-300 ease-linear dark:bg-boxdark lg:static lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden border-r border-stroke bg-white duration-300 ease-linear dark:border-strokedark dark:bg-sidebar-dark lg:static lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between gap-2 px-6 py-5.5">
-          <Link href="/dashboard" className="flex items-center gap-2 text-xl font-bold text-white">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-sm">
-              SD
-            </span>
-            Scrap Dash
+        <div className="relative px-6 py-5.5">
+          <Link href="/dashboard" className="block">
+            <Image
+              src={theme === 'dark' ? '/card-dark.png' : '/card-light.png'}
+              alt="Scrap Dash"
+              width={1408}
+              height={768}
+              className="h-auto w-full"
+              priority
+            />
           </Link>
-          <button className="text-white lg:hidden" onClick={onClose} aria-label="Fechar menu">
+          <button
+            className="absolute right-4 top-4 text-black dark:text-white lg:hidden"
+            onClick={onClose}
+            aria-label="Fechar menu"
+          >
             <svg
               viewBox="0 0 24 24"
               className="h-6 w-6"
@@ -170,8 +181,9 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
           </button>
         </div>
 
-        <div className="flex flex-col overflow-y-auto duration-300 ease-linear">
-          <nav className="mt-5 px-4 py-4">
+        <div className="flex flex-1 overflow-y-auto duration-300 ease-linear">
+          <div className="w-2.5 shrink-0 bg-white dark:bg-sidebar-dark" />
+          <nav className="mt-5 min-w-0 flex-1 px-2.5 py-4">
             <ul className="flex flex-col gap-1.5">
               {links.map((link) => {
                 const active = pathname?.startsWith(link.href);
@@ -181,8 +193,8 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                     <Link
                       href={link.href}
                       onClick={onClose}
-                      className={`group relative flex items-center gap-2.5 rounded-sm px-4 py-2 font-medium text-bodydark1 duration-300 ease-in-out hover:bg-graydark dark:hover:bg-meta-4 ${
-                        active ? 'bg-graydark dark:bg-meta-4' : ''
+                      className={`group relative flex items-center gap-2.5 rounded-sm py-2 pr-4 font-medium text-body duration-300 ease-in-out hover:bg-gray-2 dark:text-bodydark1 dark:hover:bg-meta-4 ${
+                        active ? 'bg-gray-2 dark:bg-meta-4' : ''
                       }`}
                     >
                       <Icon className="h-5 w-5 shrink-0" />

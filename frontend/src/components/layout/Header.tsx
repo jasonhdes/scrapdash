@@ -98,7 +98,6 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
                 <span className="block text-sm font-medium text-black dark:text-white">
                   {user?.name}
                 </span>
-                <span className="block text-xs text-body dark:text-bodydark">{user?.role}</span>
               </span>
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
                 {user?.name?.charAt(0).toUpperCase() ?? '?'}

@@ -33,11 +33,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} />
 
-        <main>
-          <div className="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-            <SessionGuard>{children}</SessionGuard>
-          </div>
-        </main>
+        <div className="flex flex-1">
+          <div className="w-2.5 shrink-0 bg-whiten dark:bg-boxdark-2" />
+
+          <main className="min-w-0 flex-1">
+            <div className="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+              <SessionGuard>{children}</SessionGuard>
+            </div>
+          </main>
+
+          <div className="w-2.5 shrink-0 bg-whiten dark:bg-boxdark-2" />
+        </div>
       </div>
     </div>
   );
