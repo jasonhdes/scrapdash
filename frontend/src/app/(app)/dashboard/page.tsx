@@ -16,6 +16,7 @@ import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { StatusDonutChart } from '@/components/dashboard/StatusDonutChart';
 import { BrazilMap } from '@/components/dashboard/BrazilMap';
+import { getCurrentMonthRange } from '@/utils/dateRange';
 
 const ORDER_GROUP_LABELS: Record<string, string> = {
   completed: 'Finalizado',
@@ -76,8 +77,8 @@ function DashboardContent() {
   } = useAccounts(token);
   const [connectingId, setConnectingId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => getCurrentMonthRange().startDate);
+  const [endDate, setEndDate] = useState(() => getCurrentMonthRange().endDate);
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
   const { data: dashboard, isLoading: dashboardLoading } = useDashboard(
@@ -191,8 +192,8 @@ function DashboardContent() {
           setEndDate(e);
         }}
         onClear={() => {
-          setStartDate('');
-          setEndDate('');
+          setStartDate(getCurrentMonthRange().startDate);
+          setEndDate(getCurrentMonthRange().endDate);
         }}
       />
 

@@ -19,6 +19,12 @@ class Payment extends Model
         'paid_at',
         'money_release_date',
         'released',
+        'ml_fee',
+        'mp_processing_fee',
+        'shipping_fee',
+        'financing_fee',
+        'coupon_amount',
+        'net_received_amount',
         'synced_at',
     ];
 
@@ -29,6 +35,12 @@ class Payment extends Model
             'paid_at' => 'datetime',
             'money_release_date' => 'datetime',
             'released' => 'boolean',
+            'ml_fee' => 'decimal:2',
+            'mp_processing_fee' => 'decimal:2',
+            'shipping_fee' => 'decimal:2',
+            'financing_fee' => 'decimal:2',
+            'coupon_amount' => 'decimal:2',
+            'net_received_amount' => 'decimal:2',
             'synced_at' => 'datetime',
         ];
     }

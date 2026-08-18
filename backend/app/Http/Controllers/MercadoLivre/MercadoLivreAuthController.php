@@ -19,7 +19,7 @@ class MercadoLivreAuthController extends Controller
 
     public function __construct(private readonly MercadoLivreService $mercadoLivre) {}
 
-    public function connect(Account $account): JsonResponse
+    public function connect(Request $request, Account $account): JsonResponse
     {
         $user = Auth::guard('api')->user();
 
@@ -31,6 +31,12 @@ class MercadoLivreAuthController extends Controller
         Cache::put(self::CACHE_PREFIX.$state, [
             'account_id' => $account->id,
             'code_verifier' => $pkce['verifier'],
+            // Guardado pra callback() saber pra qual origem redirecionar de
+            // volta — sem isso, uma URL de retorno fixa pode não bater com a
+            // origem real do navegador (ex.: 127.0.0.1 vs localhost, outra
+            // porta) e o token do localStorage (isolado por origem) some,
+            // parecendo um logout que não é.
+            'frontend_origin' => $request->headers->get('origin'),
         ], now()->addMinutes(10));
 
         return response()->json([
@@ -40,11 +46,11 @@ class MercadoLivreAuthController extends Controller
 
     public function callback(Request $request): RedirectResponse
     {
-        $frontendUrl = config('services.mercadolivre.frontend_redirect_url');
         $state = (string) $request->query('state');
         $code = $request->query('code');
 
         $payload = Cache::pull(self::CACHE_PREFIX.$state);
+        $frontendUrl = $this->resolveFrontendUrl($payload['frontend_origin'] ?? null);
 
         if (! $payload || ! $code) {
             return redirect()->away("{$frontendUrl}?ml_connected=0&reason=state_invalido");
@@ -69,11 +75,34 @@ class MercadoLivreAuthController extends Controller
         $account->update([
             'mercadolivre_user_id' => $token['user_id'] ?? null,
             'mercadolivre_access_token' => $token['access_token'],
-            'mercadolivre_refresh_token' => $token['refresh_token'] ?? null,
+            // Preserva o refresh_token anterior se a resposta não trouxer um novo —
+            // sem esse fallback, uma reconexão cuja resposta venha sem refresh_token
+            // apaga silenciosamente o que já estava salvo e a conta nunca mais é
+            // renovada automaticamente (RefreshTokenJob exige refresh_token não nulo).
+            'mercadolivre_refresh_token' => $token['refresh_token'] ?? $account->mercadolivre_refresh_token,
             // Mercado Livre nem sempre retorna expires_in; 21600s (6h) é o TTL padrão documentado.
             'mercadolivre_token_expires_at' => now()->addSeconds($token['expires_in'] ?? 21600),
         ]);
 
         return redirect()->away("{$frontendUrl}?ml_connected=1&account_id={$account->id}");
+    }
+
+    /**
+     * Redireciona de volta pra origem real de quem iniciou a conexão, desde
+     * que ela esteja na allowlist (evita open redirect via Origin forjado).
+     * Sem origem reconhecida, cai na URL fixa configurada.
+     */
+    private function resolveFrontendUrl(?string $origin): string
+    {
+        $fallback = config('services.mercadolivre.frontend_redirect_url');
+
+        if (! $origin) {
+            return $fallback;
+        }
+
+        $origin = rtrim($origin, '/');
+        $allowed = config('services.mercadolivre.frontend_allowed_origins', []);
+
+        return in_array($origin, $allowed, true) ? "{$origin}/dashboard" : $fallback;
     }
 }

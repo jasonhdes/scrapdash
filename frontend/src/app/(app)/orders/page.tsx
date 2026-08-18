@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
-import { exportOrdersCsv, getSkuOptions, listOrders, markOrderProcessed } from '@/services/orders';
-import type { OrderSortColumn, SkuOption } from '@/services/orders';
+import { exportOrdersCsv, listOrders } from '@/services/orders';
+import type { OrderSortColumn } from '@/services/orders';
 import type { Order } from '@/types/order';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
 import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { Pagination } from '@/components/shared/Pagination';
-import { StatusBadge } from '@/components/shared/StatusBadge';
-import { BRASILIA_TIMEZONE, formatReleaseDate } from '@/utils/format';
+import { BRASILIA_TIMEZONE } from '@/utils/format';
+import { getCurrentMonthRange } from '@/utils/dateRange';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos os status' },
@@ -20,17 +20,62 @@ const STATUS_OPTIONS = [
   { value: 'partially_refunded', label: 'Parcialmente reembolsado' },
 ];
 
-const PROCESSED_OPTIONS = [
-  { value: '', label: 'Todos' },
-  { value: '0', label: 'Não processados' },
-  { value: '1', label: 'Processados' },
-];
-
 const RELEASED_OPTIONS = [
   { value: '', label: 'Todos' },
   { value: '1', label: 'Liberado' },
   { value: '0', label: 'Pendente' },
 ];
+
+const RELEASE_BADGE_COLORS: Record<
+  'received' | 'pending' | 'today' | 'late' | 'cancelled' | 'mediation',
+  string
+> = {
+  received: 'bg-success/10 text-success',
+  pending: 'bg-warning/10 text-warning',
+  today: 'bg-meta-5/10 text-meta-5',
+  late: 'bg-danger/10 text-danger',
+  cancelled: 'bg-danger/10 text-danger',
+  mediation: 'bg-[#8B5CF6]/10 text-[#8B5CF6]',
+};
+
+function dateKey(date: Date) {
+  return date.toLocaleDateString('en-CA', { timeZone: BRASILIA_TIMEZONE });
+}
+
+function releaseCell(
+  status: string | null,
+  inMediation: boolean | undefined,
+  releaseDate: string | null,
+  released: boolean | null | undefined,
+) {
+  if (status === 'cancelled') {
+    return { key: 'cancelled' as const, text: 'Cancelado' };
+  }
+
+  if (inMediation) {
+    return { key: 'mediation' as const, text: 'Em mediação' };
+  }
+
+  if (!releaseDate) return null;
+
+  const date = new Date(releaseDate);
+  const formatted = date.toLocaleDateString('pt-BR', { timeZone: BRASILIA_TIMEZONE });
+
+  if (released) {
+    return { key: 'received' as const, text: `${formatted} — Recebido` };
+  }
+
+  const releaseDay = dateKey(date);
+  const today = dateKey(new Date());
+
+  if (releaseDay === today) {
+    return { key: 'today' as const, text: `${formatted} — Hoje` };
+  }
+
+  return releaseDay < today
+    ? { key: 'late' as const, text: `${formatted} — Atrasado` }
+    : { key: 'pending' as const, text: `${formatted} — Aguardando` };
+}
 
 const EMPTY_TEXT_FILTERS = {
   orderNumber: '',
@@ -56,13 +101,12 @@ function formatCurrency(value: number, currency: string | null) {
 
 function formatDate(value: string | null) {
   if (!value) return '—';
-  return new Date(value).toLocaleString('pt-BR', { timeZone: BRASILIA_TIMEZONE });
+  return new Date(value).toLocaleDateString('pt-BR', { timeZone: BRASILIA_TIMEZONE });
 }
 
-function formatLocation(city: string | null, state: string | null) {
-  if (!city && !state) return '—';
-  if (city && state) return `${city}/${state}`;
-  return city ?? state ?? '—';
+function formatMoneyOrDash(value: number | null | undefined, currency: string | null) {
+  if (value === null || value === undefined) return '—';
+  return formatCurrency(value, currency);
 }
 
 export default function OrdersPage() {
@@ -73,11 +117,8 @@ export default function OrdersPage() {
   const [textFilters, setTextFilters] = useState(EMPTY_TEXT_FILTERS);
   const [status, setStatus] = useState('');
   const [released, setReleased] = useState('');
-  const [processed, setProcessed] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
-  const [skuOptions, setSkuOptions] = useState<SkuOption[]>([]);
+  const [startDate, setStartDate] = useState(() => getCurrentMonthRange().startDate);
+  const [endDate, setEndDate] = useState(() => getCurrentMonthRange().endDate);
   const [sortBy, setSortBy] = useState<OrderSortColumn | undefined>(undefined);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
@@ -85,7 +126,6 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [isLoading, setIsLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
@@ -96,27 +136,21 @@ export default function OrdersPage() {
     return () => clearTimeout(timeout);
   }, [textFiltersInput]);
 
-  useEffect(() => {
-    if (!selectedAccountId || !token) return;
-    getSkuOptions(selectedAccountId, token).then(({ data }) => setSkuOptions(data));
-  }, [selectedAccountId, token]);
-
   const filters = {
     orderNumber: textFilters.orderNumber || undefined,
     buyer: textFilters.buyer || undefined,
     product: textFilters.product || undefined,
-    skus: selectedSkus.length > 0 ? selectedSkus : undefined,
     location: textFilters.location || undefined,
     minTotal: textFilters.minTotal || undefined,
     maxTotal: textFilters.maxTotal || undefined,
     status: status || undefined,
     released: released === '' ? undefined : released === '1',
-    processed: processed === '' ? undefined : processed === '1',
     startDate: startDate || undefined,
     endDate: endDate || undefined,
     sortBy,
     sortDir,
     page,
+    perPage: startDate || endDate ? 5000 : undefined,
   };
 
   const loadOrders = useCallback(async () => {
@@ -134,10 +168,8 @@ export default function OrdersPage() {
     selectedAccountId,
     token,
     textFilters,
-    selectedSkus,
     status,
     released,
-    processed,
     startDate,
     endDate,
     sortBy,
@@ -148,17 +180,6 @@ export default function OrdersPage() {
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
-
-  async function handleToggleProcessed(order: Order) {
-    if (!selectedAccountId || !token) return;
-    setUpdatingId(order.id);
-    try {
-      await markOrderProcessed(selectedAccountId, order.id, !order.processed_at, token);
-      await loadOrders();
-    } finally {
-      setUpdatingId(null);
-    }
-  }
 
   async function handleExport() {
     if (!selectedAccountId || !token) return;
@@ -174,10 +195,8 @@ export default function OrdersPage() {
     setTextFiltersInput(EMPTY_TEXT_FILTERS);
     setStatus('');
     setReleased('');
-    setProcessed('');
-    setStartDate('');
-    setEndDate('');
-    setSelectedSkus([]);
+    setStartDate(getCurrentMonthRange().startDate);
+    setEndDate(getCurrentMonthRange().endDate);
     setSortBy(undefined);
     setSortDir('desc');
     setPage(1);
@@ -196,6 +215,31 @@ export default function OrdersPage() {
   function sortIndicator(column: OrderSortColumn) {
     if (sortBy !== column) return '';
     return sortDir === 'asc' ? ' ▲' : ' ▼';
+  }
+
+  function SortableHeader({
+    column,
+    label,
+    align = 'left',
+    width,
+  }: {
+    column: OrderSortColumn;
+    label: string;
+    align?: 'left' | 'center';
+    width?: string;
+  }) {
+    return (
+      <th className={`whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white ${width ?? ''}`}>
+        <button
+          type="button"
+          onClick={() => handleSort(column)}
+          className={`flex items-center gap-1 font-medium hover:text-primary ${align === 'center' ? 'mx-auto' : ''}`}
+        >
+          {label}
+          {sortIndicator(column)}
+        </button>
+      </th>
+    );
   }
 
   return (
@@ -272,29 +316,6 @@ export default function OrdersPage() {
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="skus" className="text-sm font-medium text-black dark:text-white">
-            SKU (selecione um ou mais)
-          </label>
-          <select
-            id="skus"
-            multiple
-            size={4}
-            value={selectedSkus}
-            onChange={(e) => {
-              setSelectedSkus(Array.from(e.target.selectedOptions, (o) => o.value));
-              setPage(1);
-            }}
-            style={inputStyle}
-            className={`${inputClass} min-w-48`}
-          >
-            {skuOptions.map((option) => (
-              <option key={option.sku} value={option.sku}>
-                {option.sku} — {option.title}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
           <label htmlFor="min_total" className="text-sm font-medium text-black dark:text-white">
             Valor mín.
           </label>
@@ -368,27 +389,6 @@ export default function OrdersPage() {
             ))}
           </select>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="processed" className="text-sm font-medium text-black dark:text-white">
-            Processamento
-          </label>
-          <select
-            id="processed"
-            value={processed}
-            onChange={(e) => {
-              setProcessed(e.target.value);
-              setPage(1);
-            }}
-            style={inputStyle}
-            className={inputClass}
-          >
-            {PROCESSED_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
         <DateRangeFilter
           startDate={startDate}
           endDate={endDate}
@@ -398,8 +398,8 @@ export default function OrdersPage() {
             setPage(1);
           }}
           onClear={() => {
-            setStartDate('');
-            setEndDate('');
+            setStartDate(getCurrentMonthRange().startDate);
+            setEndDate(getCurrentMonthRange().endDate);
             setPage(1);
           }}
         />
@@ -416,99 +416,100 @@ export default function OrdersPage() {
       ) : orders.length === 0 ? (
         <p className="text-sm text-body dark:text-bodydark">Nenhum pedido encontrado.</p>
       ) : (
-        <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
-          <table className="w-full table-auto">
-            <thead>
+        <div className="scrollbar-visible max-h-[70vh] overflow-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
+          <table className="w-full table-auto border-separate border-spacing-x-3 border-spacing-y-0">
+            <thead className="sticky top-0 z-10">
               <tr className="bg-gray-2 text-left dark:bg-meta-4">
-                <th
-                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
-                  onClick={() => handleSort('mercadolivre_order_id')}
-                >
-                  Pedido{sortIndicator('mercadolivre_order_id')}
+                <SortableHeader column="mercadolivre_order_id" label="Pedido" />
+                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">SKU</th>
+                <SortableHeader column="total_amount" label="Valor anúncio" />
+                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
+                  Valor pago
                 </th>
-                <th
-                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
-                  onClick={() => handleSort('buyer_nickname')}
-                >
-                  Comprador{sortIndicator('buyer_nickname')}
+                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
+                  Taxa ML
                 </th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">Cidade/Estado</th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">Produtos</th>
-                <th
-                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
-                  onClick={() => handleSort('total_amount')}
-                >
-                  Valor{sortIndicator('total_amount')}
+                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
+                  Taxa processamento
                 </th>
-                <th
-                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
-                  onClick={() => handleSort('status')}
-                >
-                  Status{sortIndicator('status')}
+                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
+                  Taxa envio
                 </th>
-                <th
-                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
-                  onClick={() => handleSort('ordered_at')}
-                >
-                  Data{sortIndicator('ordered_at')}
+                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
+                  Taxa financiamento
                 </th>
-                <th
-                  className="cursor-pointer whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white"
-                  onClick={() => handleSort('money_release_date')}
-                >
-                  Liberação{sortIndicator('money_release_date')}
+                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
+                  Cupom
                 </th>
-                <th className="px-4 py-4 font-medium text-black dark:text-white">Processado</th>
-                <th className="px-4 py-4"></th>
+                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
+                  Valor líquido
+                </th>
+                <SortableHeader column="ordered_at" label="Data venda" />
+                <SortableHeader column="money_release_date" label="Data liberação" />
               </tr>
             </thead>
             <tbody>
               {orders.map((order) => (
-                <tr key={order.id}>
-                  <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
+                <tr
+                  key={order.id}
+                  className="odd:bg-white even:bg-gray-2 hover:bg-gray dark:odd:bg-boxdark dark:even:bg-meta-4/40 dark:hover:bg-meta-4"
+                >
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 dark:border-strokedark">
                     <Link href={`/orders/${order.id}`} className="font-medium text-primary">
                       {order.mercadolivre_order_id}
                     </Link>
                   </td>
-                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
-                    {order.buyer_nickname ?? '—'}
-                  </td>
-                  <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
-                    {formatLocation(order.buyer_city, order.buyer_state)}
-                  </td>
-                  <td className="border-b border-stroke px-4 py-3 text-sm text-body dark:border-strokedark dark:text-bodydark">
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-sm text-body dark:border-strokedark dark:text-bodydark">
                     {order.items && order.items.length > 0
-                      ? order.items.map((item) => (
-                          <div key={item.id}>
-                            {item.title} {item.seller_sku ? `(SKU: ${item.seller_sku})` : ''} x
-                            {item.quantity}
-                          </div>
-                        ))
+                      ? order.items.map((item) => <div key={item.id}>{item.seller_sku ?? '—'}</div>)
                       : '—'}
                   </td>
-                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
                     {formatCurrency(order.total_amount, order.currency)}
                   </td>
-                  <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
-                    <StatusBadge status={order.status} />
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                    {formatMoneyOrDash(order.paid_amount, order.currency)}
                   </td>
-                  <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                    {formatMoneyOrDash(order.ml_fee, order.currency)}
+                  </td>
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                    {formatMoneyOrDash(order.mp_processing_fee, order.currency)}
+                  </td>
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                    {formatMoneyOrDash(order.shipping_fee, order.currency)}
+                  </td>
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                    {formatMoneyOrDash(order.financing_fee, order.currency)}
+                  </td>
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                    {formatMoneyOrDash(order.coupon_amount, order.currency)}
+                  </td>
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 font-medium text-black dark:border-strokedark dark:text-white">
+                    {formatMoneyOrDash(order.net_received_amount, order.currency)}
+                  </td>
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
                     {formatDate(order.ordered_at)}
                   </td>
-                  <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
-                    {formatReleaseDate(order.money_release_date, order.money_released)}
-                  </td>
-                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
-                    {order.processed_at ? 'Sim' : 'Não'}
-                  </td>
-                  <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
-                    <button
-                      disabled={updatingId === order.id}
-                      onClick={() => handleToggleProcessed(order)}
-                      className={buttonClass}
-                    >
-                      {order.processed_at ? 'Desmarcar' : 'Marcar processado'}
-                    </button>
+                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 dark:border-strokedark">
+                    {(() => {
+                      const info = releaseCell(
+                        order.status,
+                        order.in_mediation,
+                        order.money_release_date,
+                        order.money_released,
+                      );
+                      if (!info) {
+                        return <span className="text-body dark:text-bodydark">—</span>;
+                      }
+                      return (
+                        <span
+                          className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${RELEASE_BADGE_COLORS[info.key]}`}
+                        >
+                          {info.text}
+                        </span>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

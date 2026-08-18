@@ -105,7 +105,9 @@ return [
     |
     */
 
-    'ttl' => env('JWT_TTL', 60),
+    // Sessão dura 7 dias sem precisar logar de novo (10080 min); só desloga
+    // antes disso se o usuário clicar em "Sair".
+    'ttl' => env('JWT_TTL', 10080),
 
     /*
     |--------------------------------------------------------------------------
@@ -124,7 +126,7 @@ return [
     |
     */
 
-    'refresh_ttl' => env('JWT_REFRESH_TTL', 20160),
+    'refresh_ttl' => env('JWT_REFRESH_TTL', 10080),
 
     /*
     |--------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import { KpiCard } from '@/components/dashboard/KpiCard';
 import { Pagination } from '@/components/shared/Pagination';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { BRASILIA_TIMEZONE, formatReleaseDate } from '@/utils/format';
+import { getCurrentMonthRange } from '@/utils/dateRange';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos os status' },
@@ -39,8 +40,8 @@ export default function FinancialPage() {
   const { token } = useAuth();
   const { accounts, selectedAccountId, setSelectedAccountId } = useAccounts(token);
 
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => getCurrentMonthRange().startDate);
+  const [endDate, setEndDate] = useState(() => getCurrentMonthRange().endDate);
   const [status, setStatus] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [page, setPage] = useState(1);
@@ -104,8 +105,8 @@ export default function FinancialPage() {
           setPage(1);
         }}
         onClear={() => {
-          setStartDate('');
-          setEndDate('');
+          setStartDate(getCurrentMonthRange().startDate);
+          setEndDate(getCurrentMonthRange().endDate);
           setPage(1);
         }}
       />

@@ -217,28 +217,76 @@ class MercadoLivreService
     }
 
     /**
-     * A data de liberação do dinheiro (`money_release_date`) só vem no recurso
-     * completo do pagamento, não no resumo embutido no pedido — é preciso uma
-     * chamada por pagamento (endpoint legado `/collections/{id}`; o endpoint
-     * novo `/v1/payments/{id}` retornou 404 para os pagamentos testados).
+     * A data de liberação do dinheiro (`money_release_date`) e o detalhamento
+     * de taxas só vêm no recurso completo do pagamento, não no resumo
+     * embutido no pedido — é preciso uma chamada por pagamento.
      *
-     * @return array{money_release_date: ?string, released: string}
+     * @return array{
+     *     money_release_date: ?string,
+     *     released: string,
+     *     ml_fee: ?float,
+     *     mp_processing_fee: ?float,
+     *     shipping_fee: ?float,
+     *     financing_fee: ?float,
+     *     coupon_amount: ?float,
+     *     net_received_amount: ?float,
+     * }
      */
     public function getPaymentRelease(Account $account, string $paymentId): array
     {
+        // Usa a API do Mercado Pago (não a de /collections do Mercado Livre):
+        // essa é a fonte que reflete o status de liberação real, igual ao que
+        // aparece pro vendedor no site. Ver nota em config/services.php.
         $response = $this->authorizedRequest($account)->get(
-            config('services.mercadolivre.api_url')."/collections/{$paymentId}",
+            config('services.mercadolivre.payments_api_url')."/v1/payments/{$paymentId}",
         );
 
+        $empty = [
+            'money_release_date' => null,
+            'released' => 'no',
+            'ml_fee' => null,
+            'mp_processing_fee' => null,
+            'shipping_fee' => null,
+            'financing_fee' => null,
+            'coupon_amount' => null,
+            'net_received_amount' => null,
+        ];
+
         if ($response->status() === 404) {
-            return ['money_release_date' => null, 'released' => 'no'];
+            return $empty;
         }
 
-        $this->assertSuccessful($response, 'Falha ao buscar a liberação do pagamento no Mercado Livre');
+        $this->assertSuccessful($response, 'Falha ao buscar a liberação do pagamento no Mercado Pago');
+
+        // `charges_details` traz as taxas descontadas do vendedor uma a uma —
+        // agrupadas pelas categorias que aparecem de verdade nos dados desta
+        // conta. Envio pode vir com nomes diferentes (shp_cross_docking,
+        // shp_fulfillment, etc.) dependendo do tipo de logística do anúncio,
+        // por isso o prefixo em vez do nome exato.
+        $fees = ['ml_fee' => null, 'mp_processing_fee' => null, 'shipping_fee' => null, 'financing_fee' => null, 'coupon_amount' => null];
+
+        foreach ($response->json('charges_details') ?? [] as $charge) {
+            $name = $charge['name'] ?? '';
+            $amount = $charge['amounts']['original'] ?? null;
+
+            if ($name === 'ml_sale_fee') {
+                $fees['ml_fee'] = $amount;
+            } elseif ($name === 'mp_processing_fee') {
+                $fees['mp_processing_fee'] = $amount;
+            } elseif ($name === 'mp_financing_fee') {
+                $fees['financing_fee'] = $amount;
+            } elseif (($charge['type'] ?? null) === 'coupon') {
+                $fees['coupon_amount'] = $amount;
+            } elseif (str_starts_with($name, 'shp_')) {
+                $fees['shipping_fee'] = ($fees['shipping_fee'] ?? 0) + $amount;
+            }
+        }
 
         return [
             'money_release_date' => $response->json('money_release_date'),
-            'released' => $response->json('released', 'no'),
+            'released' => $response->json('money_release_status') === 'released' ? 'yes' : 'no',
+            ...$fees,
+            'net_received_amount' => $response->json('transaction_details.net_received_amount'),
         ];
     }
 

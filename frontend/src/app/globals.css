@@ -50,3 +50,25 @@ a {
 html.dark {
   color-scheme: dark;
 }
+
+/*
+ * Barra de rolagem sempre visível (não só ao passar o mouse/rolar) — usada
+ * em tabelas largas com `overflow-x-auto`, ex.: listagem de Pedidos.
+ */
+.scrollbar-visible {
+  scrollbar-width: auto;
+  scrollbar-color: var(--color-bodydark2) transparent;
+}
+
+.scrollbar-visible::-webkit-scrollbar {
+  height: 10px;
+}
+
+.scrollbar-visible::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-visible::-webkit-scrollbar-thumb {
+  background-color: var(--color-bodydark2);
+  border-radius: 9999px;
+}
