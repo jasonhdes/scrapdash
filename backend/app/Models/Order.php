@@ -79,6 +79,17 @@ class Order extends Model
     }
 
     /**
+     * Usado na listagem de pedidos pra sinalizar "em mediação" sem carregar
+     * todos os pagamentos — mesmo motivo/critério de `approvedPayment` acima.
+     *
+     * @return HasOne<Payment, $this>
+     */
+    public function mediationPayment(): HasOne
+    {
+        return $this->hasOne(Payment::class)->where('status', 'in_mediation')->latestOfMany('id');
+    }
+
+    /**
      * @return HasMany<Message, $this>
      */
     public function messages(): HasMany

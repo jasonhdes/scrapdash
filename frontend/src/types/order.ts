@@ -7,6 +7,12 @@ export interface Payment {
   paid_at: string | null;
   money_release_date: string | null;
   released: boolean | null;
+  ml_fee: number | null;
+  mp_processing_fee: number | null;
+  shipping_fee: number | null;
+  financing_fee: number | null;
+  coupon_amount: number | null;
+  net_received_amount: number | null;
   synced_at: string | null;
 }
 
@@ -33,8 +39,16 @@ export interface Order {
   ordered_at: string | null;
   processed_at: string | null;
   synced_at: string | null;
+  in_mediation?: boolean;
   money_release_date?: string | null;
   money_released?: boolean | null;
+  paid_amount?: number | null;
+  ml_fee?: number | null;
+  mp_processing_fee?: number | null;
+  shipping_fee?: number | null;
+  financing_fee?: number | null;
+  coupon_amount?: number | null;
+  net_received_amount?: number | null;
   items?: OrderItem[];
   payments?: Payment[];
 }

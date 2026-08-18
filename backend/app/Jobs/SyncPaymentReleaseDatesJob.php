@@ -37,13 +37,25 @@ class SyncPaymentReleaseDatesJob implements ShouldQueue
     public function handle(MercadoLivreService $mercadoLivre): void
     {
         $this->runLogged($this->account, SyncLog::TYPE_PAYMENT_RELEASES, function () use ($mercadoLivre) {
-            // Prioridade 1: pagamentos nunca verificados (backfill) — sempre
-            // preenche o lote com esses primeiro, senão pagamentos "vencidos
-            // mas ainda não liberados" (comum nesta conta/ambiente, nem
-            // sempre vira released=true na data prevista) competem pelo
-            // mesmo espaço do lote e o backfill nunca termina de avançar.
-            $neverChecked = Payment::whereHas('order', fn ($q) => $q->where('account_id', $this->account->id))
-                ->where('status', 'approved')
+            // Três prioridades disputando o mesmo lote, nessa ordem, pra
+            // nenhuma travar as outras:
+            // 1. Nunca verificados (backfill) — não têm nada ainda.
+            // 2. Já têm data de liberação mas não têm as taxas (pagamentos
+            //    sincronizados antes do detalhamento de taxas existir,
+            //    incluindo os já liberados — esses nunca entrariam na
+            //    prioridade 3, que só pega released=false). Usa
+            //    `net_received_amount` (não `ml_fee`) como sinal de "já
+            //    processado": alguns métodos de pagamento (ex.: crédito
+            //    consumer_credits) legitimamente não têm charges_details
+            //    detalhado, então `ml_fee` continuaria nulo pra sempre e o
+            //    pagamento voltaria a disputar o lote em todo run.
+            // 3. "Vencidos mas ainda não liberados" (comum nesta conta, nem
+            //    sempre vira released=true na data prevista) — só recheca
+            //    liberação, as taxas desses já foram capturadas antes.
+            $baseQuery = fn () => Payment::whereHas('order', fn ($q) => $q->where('account_id', $this->account->id))
+                ->where('status', 'approved');
+
+            $neverChecked = $baseQuery()
                 ->whereNull('money_release_date')
                 ->orderBy('id')
                 ->limit(self::BATCH_SIZE)
@@ -51,9 +63,19 @@ class SyncPaymentReleaseDatesJob implements ShouldQueue
 
             $remainingSlots = self::BATCH_SIZE - $neverChecked->count();
 
+            $missingFees = $remainingSlots > 0
+                ? $baseQuery()
+                    ->whereNotNull('money_release_date')
+                    ->whereNull('net_received_amount')
+                    ->orderBy('id')
+                    ->limit($remainingSlots)
+                    ->get()
+                : collect();
+
+            $remainingSlots -= $missingFees->count();
+
             $overdueRecheck = $remainingSlots > 0
-                ? Payment::whereHas('order', fn ($q) => $q->where('account_id', $this->account->id))
-                    ->where('status', 'approved')
+                ? $baseQuery()
                     ->where('released', false)
                     ->where('money_release_date', '<=', now())
                     ->orderBy('money_release_date')
@@ -61,7 +83,7 @@ class SyncPaymentReleaseDatesJob implements ShouldQueue
                     ->get()
                 : collect();
 
-            $payments = $neverChecked->concat($overdueRecheck);
+            $payments = $neverChecked->concat($missingFees)->concat($overdueRecheck);
 
             $synced = 0;
 
@@ -78,6 +100,12 @@ class SyncPaymentReleaseDatesJob implements ShouldQueue
                 $payment->update([
                     'money_release_date' => $release['money_release_date'],
                     'released' => $release['released'] === 'yes',
+                    'ml_fee' => $release['ml_fee'],
+                    'mp_processing_fee' => $release['mp_processing_fee'],
+                    'shipping_fee' => $release['shipping_fee'],
+                    'financing_fee' => $release['financing_fee'],
+                    'coupon_amount' => $release['coupon_amount'],
+                    'net_received_amount' => $release['net_received_amount'],
                 ]);
                 $synced++;
             }

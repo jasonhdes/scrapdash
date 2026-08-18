@@ -26,6 +26,7 @@ export interface OrderFilters {
   sortBy?: OrderSortColumn;
   sortDir?: "asc" | "desc";
   page?: number;
+  perPage?: number;
 }
 
 export interface SkuOption {
@@ -50,6 +51,7 @@ function buildParams(filters: OrderFilters): URLSearchParams {
   if (filters.sortBy) params.set("sort_by", filters.sortBy);
   if (filters.sortDir) params.set("sort_dir", filters.sortDir);
   if (filters.page) params.set("page", String(filters.page));
+  if (filters.perPage) params.set("per_page", String(filters.perPage));
   return params;
 }
 
