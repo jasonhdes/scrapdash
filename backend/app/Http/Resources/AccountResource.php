@@ -10,13 +10,13 @@ use Illuminate\Support\Facades\Auth;
 class AccountResource extends JsonResource
 {
     /**
-     * Módulos que existem no sistema — usado pra sempre devolver as 4
+     * Módulos que existem no sistema — usado pra sempre devolver todas as
      * chaves preenchidas (mesmo vazias), então o frontend não precisa
      * tratar chave ausente como "sem permissão" de forma implícita.
      *
      * @var array<int, string>
      */
-    private const MODULES = ['products', 'orders', 'financial', 'messages'];
+    private const MODULES = ['products', 'orders', 'financial', 'messages', 'returns'];
 
     /**
      * @return array<string, mixed>

@@ -36,6 +36,6 @@ Schedule::call(function () {
         SyncPaymentReleaseDatesJob::dispatch($account);
         SyncOrderAddressesJob::dispatch($account);
     });
-})->everyFifteenMinutes()->name('mercadolivre:sync-data')->withoutOverlapping();
+})->everyTenMinutes()->name('mercadolivre:sync-data')->withoutOverlapping();
 
 Schedule::job(new CleanupJob)->daily()->name('mercadolivre:cleanup');

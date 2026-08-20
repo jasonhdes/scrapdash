@@ -14,6 +14,8 @@ class Payment extends Model
         'order_id',
         'mercadolivre_payment_id',
         'status',
+        'status_changed_at',
+        'mediation_detected_at',
         'transaction_amount',
         'payment_method',
         'paid_at',
@@ -22,6 +24,7 @@ class Payment extends Model
         'ml_fee',
         'mp_processing_fee',
         'shipping_fee',
+        'shipping_charged_on_cancel',
         'financing_fee',
         'coupon_amount',
         'net_received_amount',
@@ -31,6 +34,8 @@ class Payment extends Model
     protected function casts(): array
     {
         return [
+            'status_changed_at' => 'datetime',
+            'mediation_detected_at' => 'datetime',
             'transaction_amount' => 'decimal:2',
             'paid_at' => 'datetime',
             'money_release_date' => 'datetime',
@@ -38,6 +43,7 @@ class Payment extends Model
             'ml_fee' => 'decimal:2',
             'mp_processing_fee' => 'decimal:2',
             'shipping_fee' => 'decimal:2',
+            'shipping_charged_on_cancel' => 'boolean',
             'financing_fee' => 'decimal:2',
             'coupon_amount' => 'decimal:2',
             'net_received_amount' => 'decimal:2',

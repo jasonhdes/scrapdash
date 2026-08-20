@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
+import { triggerMercadoLivreSync } from '@/services/accounts';
 import { exportOrdersCsv, listOrders } from '@/services/orders';
 import type { OrderSortColumn } from '@/services/orders';
 import type { Order } from '@/types/order';
@@ -12,19 +13,6 @@ import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { Pagination } from '@/components/shared/Pagination';
 import { BRASILIA_TIMEZONE } from '@/utils/format';
 import { getCurrentMonthRange } from '@/utils/dateRange';
-
-const STATUS_OPTIONS = [
-  { value: '', label: 'Todos os status' },
-  { value: 'paid', label: 'Pago' },
-  { value: 'cancelled', label: 'Cancelado' },
-  { value: 'partially_refunded', label: 'Parcialmente reembolsado' },
-];
-
-const RELEASED_OPTIONS = [
-  { value: '', label: 'Todos' },
-  { value: '1', label: 'Liberado' },
-  { value: '0', label: 'Pendente' },
-];
 
 const RELEASE_BADGE_COLORS: Record<
   'received' | 'pending' | 'today' | 'late' | 'cancelled' | 'mediation',
@@ -45,7 +33,7 @@ function dateKey(date: Date) {
 function releaseCell(
   status: string | null,
   inMediation: boolean | undefined,
-  releaseDate: string | null,
+  releaseDate: string | null | undefined,
   released: boolean | null | undefined,
 ) {
   if (status === 'cancelled') {
@@ -77,18 +65,6 @@ function releaseCell(
     : { key: 'pending' as const, text: `${formatted} — Aguardando` };
 }
 
-const EMPTY_TEXT_FILTERS = {
-  orderNumber: '',
-  buyer: '',
-  product: '',
-  location: '',
-  minTotal: '',
-  maxTotal: '',
-};
-
-const inputClass =
-  'rounded-lg border border-stroke bg-transparent py-2 pr-4 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
-const inputStyle = { paddingLeft: 16 };
 const buttonClass =
   'rounded-lg border border-stroke px-4 py-2 text-sm font-medium text-black dark:border-strokedark dark:text-white';
 
@@ -113,10 +89,6 @@ export default function OrdersPage() {
   const { token } = useAuth();
   const { accounts, selectedAccountId, setSelectedAccountId } = useAccounts(token);
 
-  const [textFiltersInput, setTextFiltersInput] = useState(EMPTY_TEXT_FILTERS);
-  const [textFilters, setTextFilters] = useState(EMPTY_TEXT_FILTERS);
-  const [status, setStatus] = useState('');
-  const [released, setReleased] = useState('');
   const [startDate, setStartDate] = useState(() => getCurrentMonthRange().startDate);
   const [endDate, setEndDate] = useState(() => getCurrentMonthRange().endDate);
   const [sortBy, setSortBy] = useState<OrderSortColumn | undefined>(undefined);
@@ -128,23 +100,7 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
 
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setTextFilters(textFiltersInput);
-      setPage(1);
-    }, 400);
-    return () => clearTimeout(timeout);
-  }, [textFiltersInput]);
-
   const filters = {
-    orderNumber: textFilters.orderNumber || undefined,
-    buyer: textFilters.buyer || undefined,
-    product: textFilters.product || undefined,
-    location: textFilters.location || undefined,
-    minTotal: textFilters.minTotal || undefined,
-    maxTotal: textFilters.maxTotal || undefined,
-    status: status || undefined,
-    released: released === '' ? undefined : released === '1',
     startDate: startDate || undefined,
     endDate: endDate || undefined,
     sortBy,
@@ -155,6 +111,7 @@ export default function OrdersPage() {
 
   const loadOrders = useCallback(async () => {
     if (!selectedAccountId || !token) return;
+    triggerMercadoLivreSync(selectedAccountId, token);
     setIsLoading(true);
     try {
       const response = await listOrders(selectedAccountId, token, filters);
@@ -164,18 +121,7 @@ export default function OrdersPage() {
       setIsLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    selectedAccountId,
-    token,
-    textFilters,
-    status,
-    released,
-    startDate,
-    endDate,
-    sortBy,
-    sortDir,
-    page,
-  ]);
+  }, [selectedAccountId, token, startDate, endDate, sortBy, sortDir, page]);
 
   useEffect(() => {
     loadOrders();
@@ -192,9 +138,6 @@ export default function OrdersPage() {
   }
 
   function clearFilters() {
-    setTextFiltersInput(EMPTY_TEXT_FILTERS);
-    setStatus('');
-    setReleased('');
     setStartDate(getCurrentMonthRange().startDate);
     setEndDate(getCurrentMonthRange().endDate);
     setSortBy(undefined);
@@ -233,7 +176,7 @@ export default function OrdersPage() {
         <button
           type="button"
           onClick={() => handleSort(column)}
-          className={`flex items-center gap-1 font-medium hover:text-primary ${align === 'center' ? 'mx-auto' : ''}`}
+          className="mx-auto flex items-center gap-1 font-medium hover:text-primary"
         >
           {label}
           {sortIndicator(column)}
@@ -259,136 +202,6 @@ export default function OrdersPage() {
       </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-sm border border-stroke bg-white p-4 shadow-1 dark:border-strokedark dark:bg-boxdark">
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="order_number" className="text-sm font-medium text-black dark:text-white">
-            Pedido
-          </label>
-          <input
-            id="order_number"
-            type="text"
-            placeholder="Número do pedido"
-            value={textFiltersInput.orderNumber}
-            onChange={(e) => setTextFiltersInput((f) => ({ ...f, orderNumber: e.target.value }))}
-            style={inputStyle}
-            className={inputClass}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="buyer" className="text-sm font-medium text-black dark:text-white">
-            Comprador
-          </label>
-          <input
-            id="buyer"
-            type="text"
-            placeholder="Apelido do comprador"
-            value={textFiltersInput.buyer}
-            onChange={(e) => setTextFiltersInput((f) => ({ ...f, buyer: e.target.value }))}
-            style={inputStyle}
-            className={inputClass}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="location" className="text-sm font-medium text-black dark:text-white">
-            Cidade/Estado
-          </label>
-          <input
-            id="location"
-            type="text"
-            placeholder="Ex.: São Paulo"
-            value={textFiltersInput.location}
-            onChange={(e) => setTextFiltersInput((f) => ({ ...f, location: e.target.value }))}
-            style={inputStyle}
-            className={inputClass}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="product" className="text-sm font-medium text-black dark:text-white">
-            Produto
-          </label>
-          <input
-            id="product"
-            type="text"
-            placeholder="Nome do produto"
-            value={textFiltersInput.product}
-            onChange={(e) => setTextFiltersInput((f) => ({ ...f, product: e.target.value }))}
-            style={inputStyle}
-            className={inputClass}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="min_total" className="text-sm font-medium text-black dark:text-white">
-            Valor mín.
-          </label>
-          <input
-            id="min_total"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="0,00"
-            value={textFiltersInput.minTotal}
-            onChange={(e) => setTextFiltersInput((f) => ({ ...f, minTotal: e.target.value }))}
-            style={inputStyle}
-            className={inputClass}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="max_total" className="text-sm font-medium text-black dark:text-white">
-            Valor máx.
-          </label>
-          <input
-            id="max_total"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="0,00"
-            value={textFiltersInput.maxTotal}
-            onChange={(e) => setTextFiltersInput((f) => ({ ...f, maxTotal: e.target.value }))}
-            style={inputStyle}
-            className={inputClass}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="status" className="text-sm font-medium text-black dark:text-white">
-            Status
-          </label>
-          <select
-            id="status"
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value);
-              setPage(1);
-            }}
-            style={inputStyle}
-            className={inputClass}
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="released" className="text-sm font-medium text-black dark:text-white">
-            Liberação
-          </label>
-          <select
-            id="released"
-            value={released}
-            onChange={(e) => {
-              setReleased(e.target.value);
-              setPage(1);
-            }}
-            style={inputStyle}
-            className={inputClass}
-          >
-            {RELEASED_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
         <DateRangeFilter
           startDate={startDate}
           endDate={endDate}
@@ -419,7 +232,7 @@ export default function OrdersPage() {
         <div className="scrollbar-visible max-h-[70vh] overflow-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
           <table className="w-full table-auto border-separate border-spacing-x-3 border-spacing-y-0">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-gray-2 text-left dark:bg-meta-4">
+              <tr className="bg-gray-2 text-center dark:bg-meta-4">
                 <SortableHeader column="mercadolivre_order_id" label="Pedido" />
                 <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">SKU</th>
                 <SortableHeader column="total_amount" label="Valor anúncio" />

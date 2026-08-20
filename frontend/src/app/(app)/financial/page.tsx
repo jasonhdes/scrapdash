@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
+import { triggerMercadoLivreSync } from '@/services/accounts';
 import { listPayments, getFinancialSummary, getReconciliation } from '@/services/financial';
 import type { FinancialSummary, PaymentWithOrder, ReconciliationRow } from '@/types/financial';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
@@ -54,6 +55,7 @@ export default function FinancialPage() {
 
   const loadData = useCallback(async () => {
     if (!selectedAccountId || !token) return;
+    triggerMercadoLivreSync(selectedAccountId, token);
     setIsLoading(true);
     try {
       const [summaryRes, reconciliationRes, paymentsRes] = await Promise.all([
@@ -134,7 +136,7 @@ export default function FinancialPage() {
             <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
               <table className="w-full table-auto">
                 <thead>
-                  <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                  <tr className="bg-gray-2 text-center dark:bg-meta-4">
                     <th className="px-4 py-4 font-medium text-black dark:text-white">Método</th>
                     <th className="px-4 py-4 font-medium text-black dark:text-white">Quantidade</th>
                     <th className="px-4 py-4 font-medium text-black dark:text-white">Valor</th>
@@ -171,7 +173,7 @@ export default function FinancialPage() {
               <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
                 <table className="w-full table-auto">
                   <thead>
-                    <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                    <tr className="bg-gray-2 text-center dark:bg-meta-4">
                       <th className="px-4 py-4 font-medium text-black dark:text-white">Pedido</th>
                       <th className="px-4 py-4 font-medium text-black dark:text-white">Data</th>
                       <th className="px-4 py-4 font-medium text-black dark:text-white">
@@ -269,7 +271,7 @@ export default function FinancialPage() {
           <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
             <table className="w-full table-auto">
               <thead>
-                <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                <tr className="bg-gray-2 text-center dark:bg-meta-4">
                   <th className="px-4 py-4 font-medium text-black dark:text-white">Pedido</th>
                   <th className="px-4 py-4 font-medium text-black dark:text-white">Status</th>
                   <th className="px-4 py-4 font-medium text-black dark:text-white">Valor</th>

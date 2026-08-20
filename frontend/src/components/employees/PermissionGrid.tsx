@@ -5,6 +5,7 @@ const MODULES: { key: PermissionModule; label: string }[] = [
   { key: 'orders', label: 'Pedidos' },
   { key: 'financial', label: 'Financeiro' },
   { key: 'messages', label: 'Mensagens' },
+  { key: 'returns', label: 'Devoluções' },
 ];
 
 const ACTIONS: { key: PermissionAction; label: string }[] = [

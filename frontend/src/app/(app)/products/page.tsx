@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
-import { listProducts } from '@/services/products';
+import { triggerMercadoLivreSync } from '@/services/accounts';
+import { listProducts, refreshProductPrices } from '@/services/products';
 import type { ProductSortColumn } from '@/services/products';
 import type { Product } from '@/types/product';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
+import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { Pagination } from '@/components/shared/Pagination';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { getCurrentMonthRange } from '@/utils/dateRange';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos os status' },
@@ -49,6 +52,11 @@ function formatCurrency(value: number, currency: string | null) {
   }).format(value);
 }
 
+function formatMoneyOrDash(value: number | null, currency: string | null) {
+  if (value === null) return '—';
+  return formatCurrency(value, currency);
+}
+
 export default function ProductsPage() {
   const { token } = useAuth();
   const { accounts, selectedAccountId, setSelectedAccountId } = useAccounts(token);
@@ -58,11 +66,14 @@ export default function ProductsPage() {
   const [searchInput, setSearchInput] = useState('');
   const [sortBy, setSortBy] = useState<ProductSortColumn | undefined>(undefined);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [startDate, setStartDate] = useState(() => getCurrentMonthRange().startDate);
+  const [endDate, setEndDate] = useState(() => getCurrentMonthRange().endDate);
   const [page, setPage] = useState(1);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshingPrices, setIsRefreshingPrices] = useState(false);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -74,6 +85,7 @@ export default function ProductsPage() {
 
   const loadProducts = useCallback(async () => {
     if (!selectedAccountId || !token) return;
+    triggerMercadoLivreSync(selectedAccountId, token);
     setIsLoading(true);
     try {
       const response = await listProducts(selectedAccountId, token, {
@@ -81,6 +93,9 @@ export default function ProductsPage() {
         search,
         sortBy,
         sortDir,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        perPage: 5000,
         page,
       });
       setProducts(response.data);
@@ -88,11 +103,22 @@ export default function ProductsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedAccountId, token, status, search, sortBy, sortDir, page]);
+  }, [selectedAccountId, token, status, search, sortBy, sortDir, startDate, endDate, page]);
 
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  async function handleRefreshPrices() {
+    if (!selectedAccountId || !token) return;
+    setIsRefreshingPrices(true);
+    try {
+      await refreshProductPrices(selectedAccountId, token);
+      await loadProducts();
+    } finally {
+      setIsRefreshingPrices(false);
+    }
+  }
 
   function handleSort(column: ProductSortColumn) {
     if (sortBy === column) {
@@ -113,17 +139,19 @@ export default function ProductsPage() {
     column,
     label,
     align = 'left',
+    width,
   }: {
     column: ProductSortColumn;
     label: string;
     align?: 'left' | 'center';
+    width?: string;
   }) {
     return (
-      <th className="px-4 py-4 font-medium text-black dark:text-white">
+      <th className={`px-4 py-4 font-medium text-black dark:text-white ${width ?? ''}`}>
         <button
           type="button"
           onClick={() => handleSort(column)}
-          className={`flex items-center gap-1 font-medium hover:text-primary ${align === 'center' ? 'mx-auto' : ''}`}
+          className="mx-auto flex items-center gap-1 font-medium hover:text-primary"
         >
           {label}
           {sortIndicator(column)}
@@ -184,6 +212,28 @@ export default function ProductsPage() {
             ))}
           </select>
         </div>
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onChange={({ startDate: s, endDate: e }) => {
+            setStartDate(s);
+            setEndDate(e);
+            setPage(1);
+          }}
+          onClear={() => {
+            setStartDate(getCurrentMonthRange().startDate);
+            setEndDate(getCurrentMonthRange().endDate);
+            setPage(1);
+          }}
+        />
+        <button
+          type="button"
+          disabled={isRefreshingPrices}
+          onClick={handleRefreshPrices}
+          className="rounded-lg border border-stroke px-4 py-2 text-sm font-medium text-black disabled:opacity-60 dark:border-strokedark dark:text-white"
+        >
+          {isRefreshingPrices ? 'Atualizando...' : 'Atualizar preços'}
+        </button>
       </div>
 
       {isLoading && products.length === 0 ? (
@@ -191,18 +241,21 @@ export default function ProductsPage() {
       ) : products.length === 0 ? (
         <p className="text-sm text-body dark:text-bodydark">Nenhum produto encontrado.</p>
       ) : (
-        <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
+        <div className="scrollbar-visible max-h-[70vh] overflow-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
           <table className="w-full table-auto border-separate border-spacing-x-3 border-spacing-y-0">
-            <thead>
-              <tr className="bg-gray-2 text-left dark:bg-meta-4">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-gray-2 text-center dark:bg-meta-4">
                 <th className="w-16 px-4 py-4"></th>
                 <SortableHeader column="title" label="Nome" />
+                <SortableHeader column="completed_sales_count" label="Vendas concluídas" align="center" />
                 <th className="px-4 py-4 font-medium text-black dark:text-white">Cód. anúncio</th>
-                <th className="px-4 py-4 text-center font-medium text-black dark:text-white">
+                <th className="w-24 px-4 py-4 text-center font-medium text-black dark:text-white">
                   Depósito
                 </th>
-                <SortableHeader column="seller_sku" label="SKU" align="center" />
+                <SortableHeader column="seller_sku" label="SKU" align="center" width="w-[100px]" />
                 <SortableHeader column="price" label="Preço" />
+                <SortableHeader column="price" label="Preço atual" />
+                <SortableHeader column="net_amount" label="Recebe" />
                 <SortableHeader column="available_quantity" label="Estoque" align="center" />
                 <SortableHeader column="status" label="Status" align="center" />
               </tr>
@@ -230,6 +283,9 @@ export default function ProductsPage() {
                       {product.title}
                     </a>
                   </td>
+                  <td className="border-b border-stroke px-4 py-3 text-center text-black dark:border-strokedark dark:text-white">
+                    {product.completed_sales_count}
+                  </td>
                   <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
                     {product.mercadolivre_item_id}
                   </td>
@@ -240,11 +296,17 @@ export default function ProductsPage() {
                       colors={DEPOSIT_COLORS}
                     />
                   </td>
-                  <td className="border-b border-stroke px-4 py-3 text-center text-body dark:border-strokedark dark:text-bodydark">
+                  <td className="w-[100px] max-w-[100px] break-all border-b border-stroke px-4 py-3 text-center text-body dark:border-strokedark dark:text-bodydark">
                     {product.seller_sku ?? '—'}
                   </td>
                   <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
                     {formatCurrency(product.price, product.currency)}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                    {formatCurrency(product.price, product.currency)}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                    {formatMoneyOrDash(product.net_amount, product.currency)}
                   </td>
                   <td className="border-b border-stroke px-4 py-3 text-center text-black dark:border-strokedark dark:text-white">
                     {product.available_quantity}
