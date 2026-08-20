@@ -77,6 +77,15 @@ class DashboardService
 
         $revenue = (clone $ordersQuery)->where('status', 'paid')->sum('total_amount');
 
+        // Receita líquida: soma do valor líquido (já descontadas as taxas do
+        // ML/MP) do pagamento aprovado de cada pedido, esteja o dinheiro já
+        // liberado ou ainda a receber — por isso usa o mesmo filtro de
+        // status 'paid' da receita bruta, não o status de liberação.
+        $netRevenue = (clone $ordersQuery)->where('status', 'paid')
+            ->with('approvedPayment')
+            ->get(['id'])
+            ->sum(fn (Order $order) => (float) ($order->approvedPayment?->net_received_amount ?? 0));
+
         $currency = (clone $ordersQuery)->value('currency');
 
         $paymentsByStatus = Payment::whereHas('order', function ($q) use ($account, $startDate, $endDate) {
@@ -107,6 +116,7 @@ class DashboardService
             ],
             'revenue' => [
                 'total' => (float) $revenue,
+                'net_total' => (float) $netRevenue,
                 'currency' => $currency,
             ],
             'orders' => [
@@ -154,15 +164,20 @@ class DashboardService
         $orders = Order::where('account_id', $account->id)
             ->where('status', 'paid')
             ->whereBetween('ordered_at', [$startDate->startOfDay(), $endDate->endOfDay()])
-            ->get(['ordered_at', 'total_amount']);
+            ->with('approvedPayment')
+            ->get(['id', 'ordered_at', 'total_amount']);
 
-        $byDate = $orders->groupBy(fn (Order $order) => $order->ordered_at->toDateString())
-            ->map(fn ($group) => (float) $group->sum('total_amount'));
+        $byDate = $orders->groupBy(fn (Order $order) => $order->ordered_at->toDateString());
 
         $series = [];
         for ($date = $startDate; $date->lte($endDate); $date = $date->addDay()) {
             $key = $date->toDateString();
-            $series[] = ['date' => $key, 'revenue' => $byDate->get($key, 0.0)];
+            $dayOrders = $byDate->get($key, collect());
+            $series[] = [
+                'date' => $key,
+                'revenue' => (float) $dayOrders->sum('total_amount'),
+                'net_revenue' => (float) $dayOrders->sum(fn (Order $order) => (float) ($order->approvedPayment?->net_received_amount ?? 0)),
+            ];
         }
 
         $currency = Order::where('account_id', $account->id)->value('currency');

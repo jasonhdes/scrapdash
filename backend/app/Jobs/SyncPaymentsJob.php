@@ -45,16 +45,34 @@ class SyncPaymentsJob implements ShouldQueue
                 }
 
                 foreach ($orderData['payments'] ?? [] as $paymentData) {
+                    $existing = Payment::where('mercadolivre_payment_id', (string) $paymentData['id'])->first();
+                    $newStatus = $paymentData['status'] ?? null;
+
+                    $attributes = [
+                        'order_id' => $order->id,
+                        'status' => $newStatus,
+                        'transaction_amount' => $paymentData['transaction_amount'] ?? null,
+                        'payment_method' => $paymentData['payment_method_id'] ?? null,
+                        'paid_at' => isset($paymentData['date_approved']) ? Carbon::parse($paymentData['date_approved']) : null,
+                        'synced_at' => now(),
+                    ];
+
+                    // Não temos o timestamp exato de quando o ML mudou o
+                    // status, só quando NÓS observamos a mudança — por isso
+                    // "status_changed_at" só avança quando o status
+                    // realmente é diferente do que já tínhamos guardado, em
+                    // vez de ser sobrescrito em todo sync.
+                    if (! $existing || $existing->status !== $newStatus) {
+                        $attributes['status_changed_at'] = now();
+                    }
+
+                    if ($newStatus === 'in_mediation' && ! $existing?->mediation_detected_at) {
+                        $attributes['mediation_detected_at'] = now();
+                    }
+
                     Payment::updateOrCreate(
                         ['mercadolivre_payment_id' => (string) $paymentData['id']],
-                        [
-                            'order_id' => $order->id,
-                            'status' => $paymentData['status'] ?? null,
-                            'transaction_amount' => $paymentData['transaction_amount'] ?? null,
-                            'payment_method' => $paymentData['payment_method_id'] ?? null,
-                            'paid_at' => isset($paymentData['date_approved']) ? Carbon::parse($paymentData['date_approved']) : null,
-                            'synced_at' => now(),
-                        ],
+                        $attributes,
                     );
                     $synced++;
                 }

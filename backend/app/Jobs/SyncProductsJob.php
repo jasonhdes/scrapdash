@@ -36,6 +36,12 @@ class SyncProductsJob implements ShouldQueue
                 // diferente e não faz sentido resumir isso num campo só.
                 $sellerSku = collect($item['attributes'] ?? [])->firstWhere('id', 'SELLER_SKU')['value_name'] ?? null;
 
+                // sale_fee_amount não entra aqui de propósito: a simulação de
+                // taxa é uma chamada extra por anúncio à API do ML, cara
+                // demais pra rodar em todo ciclo automático de sync. Só é
+                // atualizada sob demanda, pelo botão "Atualizar preços" (ver
+                // ProductController::refreshPrices) — updateOrCreate sem essa
+                // chave preserva o último valor calculado.
                 Product::updateOrCreate(
                     ['mercadolivre_item_id' => $item['id']],
                     [

@@ -1,4 +1,4 @@
-export type PermissionModule = "products" | "orders" | "financial" | "messages";
+export type PermissionModule = "products" | "orders" | "financial" | "messages" | "returns";
 export type PermissionAction = "view" | "manage";
 
 export type ModulePermissions = Partial<Record<PermissionModule, PermissionAction[]>>;

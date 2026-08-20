@@ -155,7 +155,7 @@ export default function OrderDetailPage() {
             <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
               <table className="w-full table-auto">
                 <thead>
-                  <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                  <tr className="bg-gray-2 text-center dark:bg-meta-4">
                     <th className="px-4 py-4 font-medium text-black dark:text-white">Produto</th>
                     <th className="px-4 py-4 font-medium text-black dark:text-white">SKU</th>
                     <th className="px-4 py-4 font-medium text-black dark:text-white">Quantidade</th>
@@ -198,7 +198,7 @@ export default function OrderDetailPage() {
             <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
               <table className="w-full table-auto">
                 <thead>
-                  <tr className="bg-gray-2 text-left dark:bg-meta-4">
+                  <tr className="bg-gray-2 text-center dark:bg-meta-4">
                     <th className="px-4 py-4 font-medium text-black dark:text-white">ID</th>
                     <th className="px-4 py-4 font-medium text-black dark:text-white">Status</th>
                     <th className="px-4 py-4 font-medium text-black dark:text-white">Valor</th>

@@ -32,9 +32,10 @@ export function RevenueChart({ series, currency }: RevenueChartProps) {
       toolbar: { show: false },
       fontFamily: 'inherit',
     },
-    colors: ['#3C50E0'],
+    colors: ['#3C50E0', '#219653'],
     dataLabels: { enabled: false },
     stroke: { curve: 'smooth', width: 2 },
+    legend: { position: 'top', horizontalAlign: 'left' },
     fill: {
       type: 'gradient',
       gradient: { opacityFrom: 0.35, opacityTo: 0 },
@@ -60,7 +61,10 @@ export function RevenueChart({ series, currency }: RevenueChartProps) {
   return (
     <Chart
       options={options}
-      series={[{ name: 'Receita', data: series.map((point) => point.revenue) }]}
+      series={[
+        { name: 'Receita bruta', data: series.map((point) => point.revenue) },
+        { name: 'Receita líquida', data: series.map((point) => point.net_revenue) },
+      ]}
       type="area"
       height={300}
     />

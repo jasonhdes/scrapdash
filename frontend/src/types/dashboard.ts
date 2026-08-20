@@ -6,7 +6,7 @@ export interface DashboardAlert {
 export interface DashboardData {
   account: { id: number; name: string };
   period: { start_date: string | null; end_date: string | null };
-  revenue: { total: number; currency: string | null };
+  revenue: { total: number; net_total: number; currency: string | null };
   orders: {
     total: number;
     by_status: Record<string, number>;
@@ -25,6 +25,7 @@ export interface DashboardData {
 export interface RevenueSeriesPoint {
   date: string;
   revenue: number;
+  net_revenue: number;
 }
 
 export interface RevenueSeriesData {

@@ -147,6 +147,37 @@ class MercadoLivreService
     }
 
     /**
+     * Simula a taxa de venda que o Mercado Livre cobraria hoje por esse
+     * anúncio (preço + categoria + tipo de listagem), pra calcular quanto o
+     * vendedor efetivamente recebe por venda. `site_id` é sempre o prefixo
+     * alfabético do `category_id` (convenção do ML, ex.: "MLB123" -> "MLB").
+     * Retorna null em vez de lançar exceção porque essa chamada roda uma vez
+     * por anúncio durante a sincronização — uma falha isolada não deve
+     * derrubar o sync inteiro dos outros produtos da conta.
+     */
+    public function getSaleFee(Account $account, float $price, string $listingTypeId, string $categoryId): ?float
+    {
+        if (! preg_match('/^[A-Z]+/', $categoryId, $match)) {
+            return null;
+        }
+
+        $siteId = $match[0];
+
+        $response = $this->authorizedRequest($account)->get(
+            config('services.mercadolivre.api_url')."/sites/{$siteId}/listing_prices",
+            ['price' => $price, 'listing_type_id' => $listingTypeId, 'category_id' => $categoryId],
+        );
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $fee = $response->json('sale_fee_amount');
+
+        return is_numeric($fee) ? (float) $fee : null;
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public function searchOrders(Account $account): array
@@ -250,6 +281,7 @@ class MercadoLivreService
             'financing_fee' => null,
             'coupon_amount' => null,
             'net_received_amount' => null,
+            'shipping_charged_on_cancel' => false,
         ];
 
         if ($response->status() === 404) {
@@ -265,6 +297,14 @@ class MercadoLivreService
         // por isso o prefixo em vez do nome exato.
         $fees = ['ml_fee' => null, 'mp_processing_fee' => null, 'shipping_fee' => null, 'financing_fee' => null, 'coupon_amount' => null];
 
+        // Nem toda cobrança de frete registrada na venda vira uma cobrança
+        // de fato no cancelamento — o valor só sai do bolso do vendedor
+        // quando `refund_charges` vem preenchido (o ML efetivamente
+        // executou uma cobrança de frete contra o vendedor durante o
+        // estorno). Vazio significa que foi só o registro padrão da taxa no
+        // momento da venda, sem nenhuma cobrança extra no cancelamento.
+        $shippingChargedOnCancel = false;
+
         foreach ($response->json('charges_details') ?? [] as $charge) {
             $name = $charge['name'] ?? '';
             $amount = $charge['amounts']['original'] ?? null;
@@ -279,6 +319,10 @@ class MercadoLivreService
                 $fees['coupon_amount'] = $amount;
             } elseif (str_starts_with($name, 'shp_')) {
                 $fees['shipping_fee'] = ($fees['shipping_fee'] ?? 0) + $amount;
+
+                if (! empty($charge['refund_charges'])) {
+                    $shippingChargedOnCancel = true;
+                }
             }
         }
 
@@ -287,6 +331,7 @@ class MercadoLivreService
             'released' => $response->json('money_release_status') === 'released' ? 'yes' : 'no',
             ...$fees,
             'net_received_amount' => $response->json('transaction_details.net_received_amount'),
+            'shipping_charged_on_cancel' => $shippingChargedOnCancel,
         ];
     }
 

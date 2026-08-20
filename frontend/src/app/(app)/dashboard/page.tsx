@@ -8,7 +8,7 @@ import { useAccounts } from '@/hooks/useAccounts';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useRevenueSeries } from '@/hooks/useRevenueSeries';
 import { useCustomersByState } from '@/hooks/useCustomersByState';
-import { connectMercadoLivre } from '@/services/accounts';
+import { connectMercadoLivre, triggerMercadoLivreSync } from '@/services/accounts';
 import type { Account } from '@/types/account';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
@@ -117,6 +117,12 @@ function DashboardContent() {
   }, [startDate, endDate]);
 
   useEffect(() => {
+    if (selectedAccountId && token) {
+      triggerMercadoLivreSync(selectedAccountId, token);
+    }
+  }, [selectedAccountId, token, startDate, endDate]);
+
+  useEffect(() => {
     const mlConnected = searchParams.get('ml_connected');
 
     if (mlConnected === '1') {
@@ -152,7 +158,9 @@ function DashboardContent() {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
       <KpiCard
         label="Receita"
-        value={formatCurrency(dashboard.revenue.total, dashboard.revenue.currency)}
+        value={`${formatCurrency(dashboard.revenue.total, dashboard.revenue.currency)} (bruto)`}
+        secondaryValue={`${formatCurrency(dashboard.revenue.net_total, dashboard.revenue.currency)} (líquido)`}
+        className="sm:col-span-2 xl:col-span-2"
       />
       <KpiCard label="Pedidos" value={dashboard.orders.total} />
       <KpiCard label="Enviados" value={dashboard.orders.shipped} />
@@ -163,7 +171,6 @@ function DashboardContent() {
         hint={`${dashboard.products.active} ativos`}
       />
       <KpiCard label="Pagamentos aprovados" value={dashboard.payments.by_status['approved'] ?? 0} />
-      <KpiCard label="Mensagens" value={dashboard.messages.total} />
     </div>
   ) : null;
 
