@@ -32,13 +32,10 @@ function handleExpiredSession(expiredToken: string) {
   }
 }
 
-export async function apiFetch<T>(
-  path: string,
-  options: RequestInit & { token?: string } = {},
-): Promise<T> {
+function doFetch(path: string, options: RequestInit & { token?: string }) {
   const { token, headers, ...rest } = options;
 
-  const response = await fetch(`${API_URL}${path}`, {
+  return fetch(`${API_URL}${path}`, {
     ...rest,
     headers: {
       "Content-Type": "application/json",
@@ -47,11 +44,28 @@ export async function apiFetch<T>(
       ...headers,
     },
   });
+}
+
+export async function apiFetch<T>(
+  path: string,
+  options: RequestInit & { token?: string } = {},
+): Promise<T> {
+  const { token } = options;
+
+  let response = await doFetch(path, options);
 
   if (response.status === 401 && token) {
-    // A requisição tinha um token e ainda assim voltou 401: a sessão expirou
-    // ou o token não é mais válido (não é o caso de "senha errada" no login,
-    // que nunca envia token). Limpa a sessão e manda pro login de novo.
+    // Um 401 isolado pode ser uma falha passageira do backend (já
+    // observamos o JWT_SECRET vir vazio em requisições pontuais, sem
+    // relação com o token em si) em vez do token realmente ter expirado —
+    // e como uma página costuma disparar várias chamadas em paralelo, uma
+    // falha assim já bastava pra deslogar mesmo com sessão válida. Repete
+    // uma vez antes de aceitar que a sessão expirou de verdade: um token
+    // genuinamente inválido/expirado falha de novo; uma oscilação passa.
+    response = await doFetch(path, options);
+  }
+
+  if (response.status === 401 && token) {
     handleExpiredSession(token);
   }
 
