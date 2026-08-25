@@ -110,6 +110,21 @@ function ReturnsIcon({ className }: { className?: string }) {
   );
 }
 
+function ReportsIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+    >
+      <path d="M5 3h9l5 5v13H5V3Z" strokeLinejoin="round" />
+      <path d="M9 12v5M12 9v8M15 14v3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function EmployeesIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -135,6 +150,7 @@ const LINKS: NavItem[] = [
   { href: '/financial', label: 'Financeiro', module: 'financial', icon: FinancialIcon },
   { href: '/messages', label: 'Mensagens', module: 'messages', icon: MessagesIcon },
   { href: '/returns', label: 'Devoluções', module: 'returns', icon: ReturnsIcon },
+  { href: '/reports', label: 'Relatórios', module: 'financial', icon: ReportsIcon },
 ];
 
 export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {

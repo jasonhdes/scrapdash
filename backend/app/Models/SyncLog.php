@@ -14,6 +14,8 @@ class SyncLog extends Model
 
     public const TYPE_ORDERS = 'orders';
 
+    public const TYPE_ORDER_HISTORY_IMPORT = 'order_history_import';
+
     public const TYPE_PAYMENTS = 'payments';
 
     public const TYPE_PAYMENT_RELEASES = 'payment_releases';

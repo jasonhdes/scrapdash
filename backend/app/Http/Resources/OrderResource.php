@@ -17,6 +17,8 @@ class OrderResource extends JsonResource
             'mercadolivre_order_id' => $this->mercadolivre_order_id,
             'pack_id' => $this->pack_id,
             'status' => $this->status,
+            'shipping_status' => $this->shipping_status,
+            'logistic_type' => $this->logistic_type,
             'total_amount' => (float) $this->total_amount,
             'currency' => $this->currency,
             'buyer_nickname' => $this->buyer_nickname,
@@ -37,6 +39,7 @@ class OrderResource extends JsonResource
             'net_received_amount' => $this->whenLoaded('approvedPayment', fn () => $this->approvedPayment?->net_received_amount !== null ? (float) $this->approvedPayment->net_received_amount : null),
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
             'payments' => PaymentResource::collection($this->whenLoaded('payments')),
+            'return_statuses' => OrderReturnResource::collection($this->whenLoaded('returns')),
         ];
     }
 }

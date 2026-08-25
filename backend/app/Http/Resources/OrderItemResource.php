@@ -15,6 +15,7 @@ class OrderItemResource extends JsonResource
         return [
             'id' => $this->id,
             'mercadolivre_item_id' => $this->mercadolivre_item_id,
+            'child_order_number' => $this->child_order_number,
             'title' => $this->title,
             'seller_sku' => $this->seller_sku,
             'quantity' => $this->quantity,

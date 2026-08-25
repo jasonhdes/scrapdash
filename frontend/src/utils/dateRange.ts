@@ -15,3 +15,18 @@ export function getCurrentMonthRange() {
     endDate: toDateString(now),
   };
 }
+
+/**
+ * Intervalo (primeiro ao último dia) de um mês específico no formato
+ * "YYYY-MM" — usado na página de detalhe de um mês em Relatórios.
+ */
+export function getMonthRange(month: string) {
+  const [year, monthIndex] = month.split('-').map(Number);
+  const firstDay = new Date(year, monthIndex - 1, 1);
+  const lastDay = new Date(year, monthIndex, 0);
+
+  return {
+    startDate: toDateString(firstDay),
+    endDate: toDateString(lastDay),
+  };
+}

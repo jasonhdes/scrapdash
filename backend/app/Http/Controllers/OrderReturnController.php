@@ -179,12 +179,13 @@ class OrderReturnController extends Controller
         // - cancelado em até 24h da compra -> comprou_cancelou (valor bruto)
         // - cancelado depois de 24h -> desconto_venda (valor líquido: preço
         //   - taxas do ML/MP, já que elas normalmente não voltam)
-        // "desconto_frete" só entra JUNTO com desconto_venda, e só quando a
-        // API confirma que o frete foi de fato cobrado do vendedor no
-        // cancelamento (nem todo pedido enviado tem isso — ver
-        // MercadoLivreService::getPaymentRelease). "peças devolvidas" NÃO
-        // entra aqui: só é confirmado manualmente quando a peça chega
-        // fisicamente de volta na loja.
+        // "desconto_frete": mesma regra descoberta no relatório oficial de
+        // vendas do ML — sempre que o valor líquido do pagamento (aqui ou
+        // nos ramos de mediação/estorno abaixo) vem negativo, é o frete que
+        // ficou com o vendedor no cancelamento; separa esse valor como
+        // desconto_frete e usa 0 no evento principal, nunca um negativo.
+        // "peças devolvidas" NÃO entra aqui: só é confirmado manualmente
+        // quando a peça chega fisicamente de volta na loja.
         $cancelledLifecycleStatuses = [
             OrderReturn::STATUS_COMPROU_CANCELOU,
             OrderReturn::STATUS_DESCONTO_VENDA,
@@ -213,9 +214,6 @@ class OrderReturnController extends Controller
             // pra pagamentos aprovados — pedidos cancelados/estornados nunca
             // passam por ali, então busca ao vivo só quando realmente falta
             // e o "desconto de venda" (que usa o valor líquido) se aplica.
-            // "desconto de frete" NÃO é gerado automaticamente aqui — assim
-            // como "peças devolvidas", é adicionado manualmente pelo "+ Nova
-            // entrada" quando fizer sentido pro pedido.
             if (! $isComprouCancelou && $payment && $payment->net_received_amount === null) {
                 $release = $mercadoLivre->getPaymentRelease($account, $payment->mercadolivre_payment_id);
                 $payment->update(['net_received_amount' => $release['net_received_amount']]);
@@ -224,10 +222,10 @@ class OrderReturnController extends Controller
             $buyerName = $order->buyer_nickname;
             $productName = $order->items->pluck('title')->filter()->implode(', ') ?: null;
             $occurredAt = $referenceTime ?? now();
+            $commonAttrs = ['occurred_at' => $occurredAt, 'buyer_name' => $buyerName, 'product_name' => $productName];
 
             foreach ($targetStatuses as $status) {
                 $value = match ($status) {
-                    OrderReturn::STATUS_DESCONTO_FRETE => (float) ($payment?->shipping_fee ?? 0),
                     // Valor líquido: o que o vendedor efetivamente receberia
                     // pela venda (preço - taxas do ML/MP) — não o valor bruto
                     // do anúncio, já que as taxas normalmente não voltam.
@@ -235,14 +233,27 @@ class OrderReturnController extends Controller
                     default => (float) $order->total_amount,
                 };
 
-                $result = $this->upsertAuto($account, $order->id, $status, [
-                    'occurred_at' => $occurredAt,
-                    'buyer_name' => $buyerName,
-                    'value' => $value,
-                    'product_name' => $productName,
-                ]);
+                // Mesma regra descoberta no relatório oficial de vendas do
+                // ML: quando o valor líquido do pagamento fica negativo, é
+                // porque o frete foi cobrado do vendedor no cancelamento —
+                // separa isso como "desconto de frete" e usa 0 aqui, nunca
+                // um valor negativo.
+                if ($payment?->net_received_amount !== null && $payment->net_received_amount < 0) {
+                    $value = max($value, 0.0);
+                }
+
+                $result = $this->upsertAuto($account, $order->id, $status, [...$commonAttrs, 'value' => $value]);
 
                 $result ? $created++ : $updated++;
+            }
+
+            if ($payment?->net_received_amount !== null && $payment->net_received_amount < 0) {
+                $shipResult = $this->upsertAuto($account, $order->id, OrderReturn::STATUS_DESCONTO_FRETE, [
+                    ...$commonAttrs,
+                    'value' => abs((float) $payment->net_received_amount),
+                ]);
+                $shipResult ? $created++ : $updated++;
+                $targetStatuses[] = OrderReturn::STATUS_DESCONTO_FRETE;
             }
 
             $staleStatuses = array_diff($cancelledLifecycleStatuses, $targetStatuses);
@@ -271,11 +282,26 @@ class OrderReturnController extends Controller
                 ]);
             }
 
-            $result = $this->upsertAuto($account, $payment->order_id, OrderReturn::STATUS_VALOR_RETIDO, [
+            $mediationAttrs = [
                 'occurred_at' => $payment->mediation_detected_at ?? $payment->paid_at ?? $payment->synced_at ?? now(),
                 'buyer_name' => $payment->order?->buyer_nickname,
-                'value' => (float) ($payment->net_received_amount ?? $payment->transaction_amount),
                 'product_name' => $payment->order?->items->pluck('title')->filter()->implode(', ') ?: null,
+            ];
+
+            $value = (float) ($payment->net_received_amount ?? $payment->transaction_amount);
+
+            if ($payment->net_received_amount !== null && $payment->net_received_amount < 0) {
+                $value = max($value, 0.0);
+                $shipResult = $this->upsertAuto($account, $payment->order_id, OrderReturn::STATUS_DESCONTO_FRETE, [
+                    ...$mediationAttrs,
+                    'value' => abs((float) $payment->net_received_amount),
+                ]);
+                $shipResult ? $created++ : $updated++;
+            }
+
+            $result = $this->upsertAuto($account, $payment->order_id, OrderReturn::STATUS_VALOR_RETIDO, [
+                ...$mediationAttrs,
+                'value' => $value,
             ]);
 
             $result ? $created++ : $updated++;
@@ -291,11 +317,23 @@ class OrderReturnController extends Controller
             ->get();
 
         foreach ($resolvedMediationPayments as $payment) {
-            $result = $this->upsertAuto($account, $payment->order_id, OrderReturn::STATUS_ESTORNO_VALOR, [
+            $resolvedAttrs = [
                 'occurred_at' => $payment->status_changed_at ?? $payment->synced_at ?? now(),
                 'buyer_name' => $payment->order?->buyer_nickname,
-                'value' => $payment->transaction_amount,
                 'product_name' => $payment->order?->items->pluck('title')->filter()->implode(', ') ?: null,
+            ];
+
+            if ($payment->net_received_amount !== null && $payment->net_received_amount < 0) {
+                $shipResult = $this->upsertAuto($account, $payment->order_id, OrderReturn::STATUS_DESCONTO_FRETE, [
+                    ...$resolvedAttrs,
+                    'value' => abs((float) $payment->net_received_amount),
+                ]);
+                $shipResult ? $created++ : $updated++;
+            }
+
+            $result = $this->upsertAuto($account, $payment->order_id, OrderReturn::STATUS_ESTORNO_VALOR, [
+                ...$resolvedAttrs,
+                'value' => $payment->transaction_amount,
             ]);
 
             $result ? $created++ : $updated++;

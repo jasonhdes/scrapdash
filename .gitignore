@@ -6,3 +6,5 @@
 # desta máquina — caminhos do XAMPP hardcoded). O resto de .claude/
 # (skills) é compartilhado do projeto e continua versionado.
 .claude/settings.json
+
+/planilha-dados

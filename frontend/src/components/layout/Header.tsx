@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useAccounts } from '@/hooks/useAccounts';
 import { useTheme } from '@/hooks/useTheme';
+import { triggerMercadoLivreSync } from '@/services/accounts';
 
 function HamburgerIcon({ className }: { className?: string }) {
   return (
@@ -51,16 +53,49 @@ function MoonIcon({ className }: { className?: string }) {
   );
 }
 
+function SyncIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+    >
+      <path
+        d="M4 12a8 8 0 0 1 13.66-5.66M20 12a8 8 0 0 1-13.66 5.66"
+        strokeLinecap="round"
+      />
+      <path d="M17 3v4h-4M7 21v-4h4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
+  const { selectedAccountId } = useAccounts(token);
   const { theme, toggleTheme } = useTheme();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done' | 'skipped'>('idle');
 
   async function handleLogout() {
     setUserMenuOpen(false);
     await logout();
     router.push('/login');
+  }
+
+  async function handleSync() {
+    if (!selectedAccountId || !token || syncState === 'syncing') return;
+    setSyncState('syncing');
+    try {
+      const result = await triggerMercadoLivreSync(selectedAccountId, token);
+      setSyncState(result?.triggered ? 'done' : 'skipped');
+    } catch {
+      setSyncState('idle');
+      return;
+    }
+    setTimeout(() => setSyncState('idle'), 2500);
   }
 
   return (
@@ -87,6 +122,24 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
             ) : (
               <MoonIcon className="h-4.5 w-4.5" />
             )}
+          </button>
+
+          <button
+            onClick={handleSync}
+            disabled={!selectedAccountId || syncState === 'syncing'}
+            aria-label="Atualizar dados do Mercado Livre"
+            title={
+              syncState === 'done'
+                ? 'Sincronização solicitada'
+                : syncState === 'skipped'
+                  ? 'Já sincronizado recentemente'
+                  : 'Atualizar pedidos, vendas e produtos com o Mercado Livre'
+            }
+            className="flex h-8.5 w-8.5 items-center justify-center rounded-full border-[0.5px] border-stroke bg-gray hover:text-primary disabled:opacity-50 dark:border-strokedark dark:bg-meta-4 dark:text-white"
+          >
+            <SyncIcon
+              className={`h-4.5 w-4.5 ${syncState === 'syncing' ? 'animate-spin' : ''} ${syncState === 'done' ? 'text-success' : ''}`}
+            />
           </button>
 
           <div className="relative">

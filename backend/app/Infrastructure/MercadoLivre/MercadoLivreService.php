@@ -3,6 +3,7 @@
 namespace App\Infrastructure\MercadoLivre;
 
 use App\Models\Account;
+use Carbon\CarbonInterface;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -178,18 +179,34 @@ class MercadoLivreService
     }
 
     /**
+     * Sem `$dateFrom`/`$dateTo`, traz só os pedidos mais recentes — o
+     * `offset < 1000` abaixo é o próprio limite de paginação da API do
+     * Mercado Livre (offset + limit não pode passar de 1000), então uma
+     * conta com muito volume nunca alcança pedidos de meses atrás dessa
+     * forma. Passando um período (ver ImportOrderHistoryJob), cada busca
+     * fica restrita a esse intervalo, o que mantém a contagem de resultados
+     * abaixo desse limite mesmo pra contas de alto volume.
+     *
      * @return array<int, array<string, mixed>>
      */
-    public function searchOrders(Account $account): array
+    public function searchOrders(Account $account, ?CarbonInterface $dateFrom = null, ?CarbonInterface $dateTo = null): array
     {
         $orders = [];
         $offset = 0;
         $limit = 50;
 
+        $baseQuery = ['seller' => $account->mercadolivre_user_id, 'sort' => 'date_desc'];
+        if ($dateFrom) {
+            $baseQuery['order.date_created.from'] = $dateFrom->toIso8601String();
+        }
+        if ($dateTo) {
+            $baseQuery['order.date_created.to'] = $dateTo->toIso8601String();
+        }
+
         do {
             $response = $this->authorizedRequest($account)->get(
                 config('services.mercadolivre.api_url').'/orders/search',
-                ['seller' => $account->mercadolivre_user_id, 'offset' => $offset, 'limit' => $limit, 'sort' => 'date_desc'],
+                [...$baseQuery, 'offset' => $offset, 'limit' => $limit],
             );
 
             $this->assertSuccessful($response, 'Falha ao buscar pedidos do Mercado Livre');

@@ -21,6 +21,7 @@ class Order extends Model
         'shipping_substatus',
         'shipping_status_synced_at',
         'status',
+        'logistic_type',
         'total_amount',
         'currency',
         'buyer_nickname',
@@ -103,5 +104,13 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * @return HasMany<OrderReturn, $this>
+     */
+    public function returns(): HasMany
+    {
+        return $this->hasMany(OrderReturn::class);
     }
 }

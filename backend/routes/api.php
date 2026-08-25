@@ -13,6 +13,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderReturnController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -33,6 +34,7 @@ Route::middleware(['auth:api', 'throttle:api'])->group(function () {
     Route::get('accounts', [AccountController::class, 'index']);
     Route::post('accounts/{account}/mercadolivre/connect', [MercadoLivreAuthController::class, 'connect']);
     Route::post('accounts/{account}/mercadolivre/sync', [MercadoLivreSyncController::class, 'trigger']);
+    Route::post('accounts/{account}/mercadolivre/import-history', [MercadoLivreSyncController::class, 'importHistory']);
     Route::get('accounts/{account}/dashboard', [DashboardController::class, 'show']);
     Route::get('accounts/{account}/dashboard/revenue-series', [DashboardController::class, 'revenueSeries']);
     Route::get('accounts/{account}/dashboard/customers-by-state', [DashboardController::class, 'customersByState']);
@@ -54,6 +56,9 @@ Route::middleware(['auth:api', 'throttle:api'])->group(function () {
     Route::get('accounts/{account}/payments', [PaymentController::class, 'index']);
     Route::get('accounts/{account}/financial/summary', [FinancialController::class, 'summary']);
     Route::get('accounts/{account}/financial/reconciliation', [FinancialController::class, 'reconciliation']);
+
+    Route::get('accounts/{account}/reports/movements', [ReportController::class, 'movements']);
+    Route::get('accounts/{account}/reports/monthly', [ReportController::class, 'monthly']);
 
     Route::get('accounts/{account}/returns', [OrderReturnController::class, 'index']);
     Route::get('accounts/{account}/returns/summary', [OrderReturnController::class, 'summary']);

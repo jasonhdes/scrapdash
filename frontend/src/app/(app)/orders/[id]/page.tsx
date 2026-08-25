@@ -162,6 +162,9 @@ export default function OrderDetailPage() {
                     <th className="px-4 py-4 font-medium text-black dark:text-white">
                       Preço unitário
                     </th>
+                    <th className="px-4 py-4 font-medium text-black dark:text-white">
+                      Pedido filho
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -180,6 +183,9 @@ export default function OrderDetailPage() {
                         {item.unit_price !== null
                           ? formatCurrency(item.unit_price, item.currency)
                           : '—'}
+                      </td>
+                      <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                        {item.child_order_number ?? '—'}
                       </td>
                     </tr>
                   ))}

@@ -38,7 +38,7 @@ class OrderController extends Controller
         Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'orders']);
 
         $orders = $this->applySort($this->filteredQuery($request, $account), $request)
-            ->with('approvedPayment', 'mediationPayment', 'items')
+            ->with('approvedPayment', 'mediationPayment', 'items', 'returns')
             ->paginate($request->integer('per_page', 20));
 
         return OrderResource::collection($orders);

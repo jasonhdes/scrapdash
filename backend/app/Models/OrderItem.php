@@ -10,6 +10,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'mercadolivre_item_id',
+        'child_order_number',
         'title',
         'seller_sku',
         'quantity',
