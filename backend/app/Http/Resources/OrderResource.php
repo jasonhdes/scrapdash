@@ -40,6 +40,7 @@ class OrderResource extends JsonResource
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
             'payments' => PaymentResource::collection($this->whenLoaded('payments')),
             'return_statuses' => OrderReturnResource::collection($this->whenLoaded('returns')),
+            'return_history' => OrderReturnHistoryResource::collection($this->whenLoaded('returnHistory')),
         ];
     }
 }

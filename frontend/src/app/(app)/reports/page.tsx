@@ -63,6 +63,26 @@ function formatMonthLabel(month: string) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+function cancelledCount(row: MonthlyReportRow) {
+  return row.returns_by_status['comprou_cancelou']?.count ?? 0;
+}
+
+// "Devolvidos" = pedidos com status 'desconto de venda' — cancelados e
+// devolvidos com valor estornado ao comprador (ver regra de classificação
+// do Estado da planilha/relatório do ML). 'Peças devolvidas' continua uma
+// categoria só manual, nunca gerada automaticamente por aqui.
+function returnedCount(row: MonthlyReportRow) {
+  return row.returns_by_status['desconto_venda']?.count ?? 0;
+}
+
+function returnedValue(row: MonthlyReportRow) {
+  return row.returns_by_status['desconto_venda']?.total ?? 0;
+}
+
+function freightDiscountValue(row: MonthlyReportRow) {
+  return row.returns_by_status['desconto_frete']?.total ?? 0;
+}
+
 function returnsBreakdownTitle(row: MonthlyReportRow) {
   return Object.entries(row.returns_by_status)
     .filter(([, entry]) => entry.count > 0)
@@ -211,10 +231,10 @@ export default function ReportsPage() {
                   <th className="px-4 py-4 font-medium text-black dark:text-white">Pedidos</th>
                   <th className="px-4 py-4 font-medium text-black dark:text-white">Receita bruta</th>
                   <th className="px-4 py-4 font-medium text-black dark:text-white">Receita líquida</th>
-                  <th className="px-4 py-4 font-medium text-black dark:text-white">Taxa ML</th>
-                  <th className="px-4 py-4 font-medium text-black dark:text-white">Taxa MP</th>
-                  <th className="px-4 py-4 font-medium text-black dark:text-white">Frete</th>
-                  <th className="px-4 py-4 font-medium text-black dark:text-white">Devoluções/cancelamentos</th>
+                  <th className="px-4 py-4 font-medium text-black dark:text-white">Taxas ML/MP</th>
+                  <th className="px-4 py-4 font-medium text-black dark:text-white">Desconto de frete</th>
+                  <th className="px-4 py-4 font-medium text-black dark:text-white">Canc./Devol.</th>
+                  <th className="px-4 py-4 font-medium text-black dark:text-white">Saldo devolvidos</th>
                 </tr>
               </thead>
               <tbody>
@@ -235,19 +255,19 @@ export default function ReportsPage() {
                       {formatCurrency(row.net_revenue, currency)}
                     </td>
                     <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-center text-body dark:border-strokedark dark:text-bodydark">
-                      {formatCurrency(row.fees.ml_fee, currency)}
+                      {formatCurrency(row.fees.ml_fee + row.fees.mp_processing_fee, currency)}
                     </td>
                     <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-center text-body dark:border-strokedark dark:text-bodydark">
-                      {formatCurrency(row.fees.mp_processing_fee, currency)}
+                      {formatCurrency(freightDiscountValue(row), currency)}
                     </td>
                     <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-center text-body dark:border-strokedark dark:text-bodydark">
-                      {formatCurrency(row.fees.shipping_fee, currency)}
+                      {cancelledCount(row)}/{returnedCount(row)}
                     </td>
                     <td
                       className="whitespace-nowrap border-b border-stroke px-4 py-3 text-center font-medium text-danger dark:border-strokedark"
                       title={returnsBreakdownTitle(row)}
                     >
-                      {formatCurrency(row.returns_total, currency)}
+                      {formatCurrency(returnedValue(row), currency)}
                     </td>
                   </tr>
                 ))}

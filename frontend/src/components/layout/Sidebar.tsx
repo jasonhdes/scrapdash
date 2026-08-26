@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
-import { useConversations } from '@/hooks/useConversations';
 import { useTheme } from '@/hooks/useTheme';
 import type { PermissionModule } from '@/types/employee';
 
@@ -81,20 +80,6 @@ function FinancialIcon({ className }: { className?: string }) {
   );
 }
 
-function MessagesIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-    >
-      <path d="M4 5h16v11H8l-4 4V5Z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 function ReturnsIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -148,7 +133,6 @@ const LINKS: NavItem[] = [
   { href: '/products', label: 'Produtos', module: 'products', icon: ProductsIcon },
   { href: '/orders', label: 'Pedidos', module: 'orders', icon: OrdersIcon },
   { href: '/financial', label: 'Financeiro', module: 'financial', icon: FinancialIcon },
-  { href: '/messages', label: 'Mensagens', module: 'messages', icon: MessagesIcon },
   { href: '/returns', label: 'Devoluções', module: 'returns', icon: ReturnsIcon },
   { href: '/reports', label: 'Relatórios', module: 'financial', icon: ReportsIcon },
 ];
@@ -157,7 +141,6 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
   const pathname = usePathname();
   const { user, token } = useAuth();
   const { selectedAccount } = useAccounts(token);
-  const { unreadTotal } = useConversations(selectedAccount?.id ?? null, token);
   const { theme } = useTheme();
 
   const links = LINKS.filter((link) => {
@@ -231,11 +214,6 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
                     >
                       <Icon className="h-5 w-5 shrink-0" />
                       {link.label}
-                      {link.href === '/messages' && unreadTotal > 0 && (
-                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-semibold text-white">
-                          {unreadTotal}
-                        </span>
-                      )}
                     </Link>
                   </li>
                 );

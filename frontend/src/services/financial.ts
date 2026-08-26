@@ -1,10 +1,9 @@
 import { apiFetch } from "@/services/api";
 import type { PaginatedResponse } from "@/types/pagination";
-import type { FinancialSummary, PaymentWithOrder, ReconciliationRow } from "@/types/financial";
+import type { FinancialBalance, FinancialSummary, PaymentWithOrder } from "@/types/financial";
 
 export interface PaymentFilters {
   status?: string;
-  paymentMethod?: string;
   startDate?: string;
   endDate?: string;
   page?: number;
@@ -13,7 +12,6 @@ export interface PaymentFilters {
 export function listPayments(accountId: number, token: string, filters: PaymentFilters = {}) {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
-  if (filters.paymentMethod) params.set("payment_method", filters.paymentMethod);
   if (filters.startDate) params.set("start_date", filters.startDate);
   if (filters.endDate) params.set("end_date", filters.endDate);
   if (filters.page) params.set("page", String(filters.page));
@@ -39,9 +37,21 @@ export function getFinancialSummary(accountId: number, token: string, startDate?
   );
 }
 
-export function getReconciliation(accountId: number, token: string) {
-  return apiFetch<{ data: ReconciliationRow[]; meta: { total: number } }>(
-    `/accounts/${accountId}/financial/reconciliation`,
-    { token },
-  );
+export function getFinancialBalance(accountId: number, token: string) {
+  return apiFetch<FinancialBalance>(`/accounts/${accountId}/financial/balance`, { token });
+}
+
+export function updateBalanceSeed(accountId: number, token: string, value: number) {
+  return apiFetch<FinancialBalance>(`/accounts/${accountId}/financial/balance-seed`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify({ value }),
+  });
+}
+
+export function saveFinancialValidation(accountId: number, token: string) {
+  return apiFetch<FinancialBalance>(`/accounts/${accountId}/financial/validate`, {
+    method: "POST",
+    token,
+  });
 }

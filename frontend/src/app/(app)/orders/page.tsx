@@ -264,27 +264,9 @@ export default function OrdersPage() {
             <thead className="sticky top-0 z-10">
               <tr className="bg-gray-2 text-center dark:bg-meta-4">
                 <SortableHeader column="mercadolivre_order_id" label="Pedido" />
-                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">SKU</th>
+                <th className="w-[10ch] max-w-[10ch] px-4 py-4 font-medium text-black dark:text-white">SKU</th>
                 <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">Depósito</th>
                 <SortableHeader column="total_amount" label="Valor anúncio" />
-                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
-                  Valor pago
-                </th>
-                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
-                  Taxa ML
-                </th>
-                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
-                  Taxa processamento
-                </th>
-                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
-                  Taxa envio
-                </th>
-                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
-                  Taxa financiamento
-                </th>
-                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
-                  Cupom
-                </th>
                 <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
                   Valor líquido
                 </th>
@@ -303,9 +285,13 @@ export default function OrdersPage() {
                       {order.mercadolivre_order_id}
                     </Link>
                   </td>
-                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-sm text-body dark:border-strokedark dark:text-bodydark">
+                  <td className="w-[10ch] max-w-[10ch] truncate border-b border-stroke px-4 py-3 text-sm text-body dark:border-strokedark dark:text-bodydark">
                     {order.items && order.items.length > 0
-                      ? order.items.map((item) => <div key={item.id}>{item.seller_sku ?? '—'}</div>)
+                      ? order.items.map((item) => (
+                          <div key={item.id} className="truncate" title={item.seller_sku ?? undefined}>
+                            {item.seller_sku ?? '—'}
+                          </div>
+                        ))
                       : '—'}
                   </td>
                   <td className="border-b border-stroke px-4 py-3 text-center dark:border-strokedark">
@@ -317,24 +303,6 @@ export default function OrdersPage() {
                   </td>
                   <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
                     {formatCurrency(order.total_amount, order.currency)}
-                  </td>
-                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
-                    {formatMoneyOrDash(order.paid_amount, order.currency)}
-                  </td>
-                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
-                    {formatMoneyOrDash(order.ml_fee, order.currency)}
-                  </td>
-                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
-                    {formatMoneyOrDash(order.mp_processing_fee, order.currency)}
-                  </td>
-                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
-                    {formatMoneyOrDash(order.shipping_fee, order.currency)}
-                  </td>
-                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
-                    {formatMoneyOrDash(order.financing_fee, order.currency)}
-                  </td>
-                  <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
-                    {formatMoneyOrDash(order.coupon_amount, order.currency)}
                   </td>
                   <td className="whitespace-nowrap border-b border-stroke px-4 py-3 font-medium text-black dark:border-strokedark dark:text-white">
                     {formatMoneyOrDash(order.net_received_amount, order.currency)}

@@ -20,6 +20,9 @@ class Account extends Model
         'mercadolivre_access_token',
         'mercadolivre_refresh_token',
         'mercadolivre_token_expires_at',
+        'financial_balance_seed',
+        'financial_balance_seed_updated_at',
+        'financial_last_validated_at',
     ];
 
     protected $hidden = [
@@ -33,6 +36,9 @@ class Account extends Model
             'mercadolivre_access_token' => 'encrypted',
             'mercadolivre_refresh_token' => 'encrypted',
             'mercadolivre_token_expires_at' => 'datetime',
+            'financial_balance_seed' => 'decimal:2',
+            'financial_balance_seed_updated_at' => 'datetime',
+            'financial_last_validated_at' => 'datetime',
         ];
     }
 

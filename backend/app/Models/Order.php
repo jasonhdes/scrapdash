@@ -113,4 +113,12 @@ class Order extends Model
     {
         return $this->hasMany(OrderReturn::class);
     }
+
+    /**
+     * @return HasMany<OrderReturnHistory, $this>
+     */
+    public function returnHistory(): HasMany
+    {
+        return $this->hasMany(OrderReturnHistory::class);
+    }
 }

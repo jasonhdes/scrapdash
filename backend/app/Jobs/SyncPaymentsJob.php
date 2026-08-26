@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Infrastructure\MercadoLivre\MercadoLivreService;
 use App\Jobs\Concerns\LogsSyncActivity;
 use App\Models\Account;
 use App\Models\Order;
@@ -34,7 +35,14 @@ class SyncPaymentsJob implements ShouldQueue
 
     public function handle(): void
     {
-        $this->runLogged($this->account, SyncLog::TYPE_PAYMENTS, function () {
+        // Não injetado via assinatura de handle() porque essa classe é
+        // sempre instanciada e chamada em processo (`new
+        // SyncPaymentsJob(...)->handle()`), nunca por ::dispatch() — o
+        // container só resolveria os parâmetros automaticamente no segundo
+        // caso.
+        $mercadoLivre = app(MercadoLivreService::class);
+
+        $this->runLogged($this->account, SyncLog::TYPE_PAYMENTS, function () use ($mercadoLivre) {
             $synced = 0;
 
             foreach ($this->ordersData as $orderData) {
@@ -63,7 +71,27 @@ class SyncPaymentsJob implements ShouldQueue
                     // realmente é diferente do que já tínhamos guardado, em
                     // vez de ser sobrescrito em todo sync.
                     if (! $existing || $existing->status !== $newStatus) {
-                        $attributes['status_changed_at'] = now();
+                        // Pra um pagamento que a gente está vendo pela
+                        // primeira vez JÁ num estado finalizado (cancelado,
+                        // reembolsado...), "agora" é uma mentira — o status
+                        // pode ter mudado há dias/semanas (ex: importação
+                        // avulsa, ou o pedido foi cancelado entre um ciclo
+                        // de sincronização e outro). Nesses casos busca a
+                        // data real na API em vez de cravar `now()`, senão
+                        // um lote inteiro de pedidos acaba com a mesma
+                        // "data de devolução" — o próprio momento do sync.
+                        $isFreshFinalized = ! $existing && in_array($newStatus, [
+                            'cancelled', 'refunded', 'rejected', 'partially_refunded',
+                        ], true);
+
+                        if ($isFreshFinalized) {
+                            $release = $mercadoLivre->getPaymentRelease($this->account, (string) $paymentData['id']);
+                            $attributes['status_changed_at'] = $release['date_last_updated']
+                                ? Carbon::parse($release['date_last_updated'])
+                                : now();
+                        } else {
+                            $attributes['status_changed_at'] = now();
+                        }
                     }
 
                     if ($newStatus === 'in_mediation' && ! $existing?->mediation_detected_at) {
