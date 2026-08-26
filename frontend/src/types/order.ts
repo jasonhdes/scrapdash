@@ -19,6 +19,7 @@ export interface Payment {
 export interface OrderItem {
   id: number;
   mercadolivre_item_id: string;
+  child_order_number: string | null;
   title: string;
   seller_sku: string | null;
   quantity: number;
@@ -26,11 +27,22 @@ export interface OrderItem {
   currency: string | null;
 }
 
+export interface OrderReturnStatusEntry {
+  id: number;
+  status: string;
+  occurred_at: string;
+  value: number;
+  verified: boolean;
+  source: "auto" | "manual";
+}
+
 export interface Order {
   id: number;
   mercadolivre_order_id: string;
   pack_id: string | null;
   status: string | null;
+  shipping_status: string | null;
+  logistic_type: string | null;
   total_amount: number;
   currency: string | null;
   buyer_nickname: string | null;
@@ -51,4 +63,5 @@ export interface Order {
   net_received_amount?: number | null;
   items?: OrderItem[];
   payments?: Payment[];
+  return_statuses?: OrderReturnStatusEntry[];
 }

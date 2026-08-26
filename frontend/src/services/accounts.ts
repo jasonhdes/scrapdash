@@ -24,3 +24,16 @@ export function triggerMercadoLivreSync(accountId: number, token: string) {
     token,
   }).catch(() => undefined);
 }
+
+/**
+ * Importa pedidos de até 1 ano atrás (o mesmo limite que o Mercado Livre
+ * permite filtrar) — ação sob demanda, mais pesada que a sincronização de
+ * rotina, por isso não é fire-and-forget: o botão que chama isso mostra o
+ * resultado ao usuário.
+ */
+export function importOrderHistory(accountId: number, token: string) {
+  return apiFetch<{ triggered: boolean }>(`/accounts/${accountId}/mercadolivre/import-history`, {
+    method: "POST",
+    token,
+  });
+}

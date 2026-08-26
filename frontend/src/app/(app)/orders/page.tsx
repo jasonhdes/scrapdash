@@ -4,15 +4,17 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
-import { triggerMercadoLivreSync } from '@/services/accounts';
+import { importOrderHistory, triggerMercadoLivreSync } from '@/services/accounts';
 import { exportOrdersCsv, listOrders } from '@/services/orders';
 import type { OrderSortColumn } from '@/services/orders';
 import type { Order } from '@/types/order';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
 import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { Pagination } from '@/components/shared/Pagination';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { BRASILIA_TIMEZONE } from '@/utils/format';
 import { getCurrentMonthRange } from '@/utils/dateRange';
+import { DEPOSIT_COLORS, DEPOSIT_LABELS, depositKey } from '@/utils/deposit';
 
 const RELEASE_BADGE_COLORS: Record<
   'received' | 'pending' | 'today' | 'late' | 'cancelled' | 'mediation',
@@ -99,6 +101,7 @@ export default function OrdersPage() {
   const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const [historyState, setHistoryState] = useState<'idle' | 'importing' | 'done' | 'skipped'>('idle');
 
   const filters = {
     startDate: startDate || undefined,
@@ -135,6 +138,19 @@ export default function OrdersPage() {
     } finally {
       setIsExporting(false);
     }
+  }
+
+  async function handleImportHistory() {
+    if (!selectedAccountId || !token || historyState === 'importing') return;
+    setHistoryState('importing');
+    try {
+      const result = await importOrderHistory(selectedAccountId, token);
+      setHistoryState(result?.triggered ? 'done' : 'skipped');
+    } catch {
+      setHistoryState('idle');
+      return;
+    }
+    setTimeout(() => setHistoryState('idle'), 4000);
   }
 
   function clearFilters() {
@@ -222,6 +238,20 @@ export default function OrdersPage() {
         <button disabled={isExporting} onClick={handleExport} className={buttonClass}>
           {isExporting ? 'Exportando...' : 'Exportar CSV'}
         </button>
+        <button
+          disabled={historyState === 'importing'}
+          onClick={handleImportHistory}
+          title="Busca no Mercado Livre pedidos de até 1 ano atrás que ainda não estão no sistema"
+          className={buttonClass}
+        >
+          {historyState === 'importing'
+            ? 'Importando...'
+            : historyState === 'done'
+              ? 'Importação iniciada ✓'
+              : historyState === 'skipped'
+                ? 'Já importado recentemente'
+                : 'Importar histórico (1 ano)'}
+        </button>
       </div>
 
       {isLoading && orders.length === 0 ? (
@@ -235,6 +265,7 @@ export default function OrdersPage() {
               <tr className="bg-gray-2 text-center dark:bg-meta-4">
                 <SortableHeader column="mercadolivre_order_id" label="Pedido" />
                 <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">SKU</th>
+                <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">Depósito</th>
                 <SortableHeader column="total_amount" label="Valor anúncio" />
                 <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
                   Valor pago
@@ -276,6 +307,13 @@ export default function OrdersPage() {
                     {order.items && order.items.length > 0
                       ? order.items.map((item) => <div key={item.id}>{item.seller_sku ?? '—'}</div>)
                       : '—'}
+                  </td>
+                  <td className="border-b border-stroke px-4 py-3 text-center dark:border-strokedark">
+                    <StatusBadge
+                      status={depositKey(order.logistic_type)}
+                      labels={DEPOSIT_LABELS}
+                      colors={DEPOSIT_COLORS}
+                    />
                   </td>
                   <td className="whitespace-nowrap border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
                     {formatCurrency(order.total_amount, order.currency)}

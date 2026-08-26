@@ -30,6 +30,7 @@ export function RevenueChart({ series, currency }: RevenueChartProps) {
     chart: {
       type: 'area',
       toolbar: { show: false },
+      zoom: { enabled: false },
       fontFamily: 'inherit',
     },
     colors: ['#3C50E0', '#219653'],

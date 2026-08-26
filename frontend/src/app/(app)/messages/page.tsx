@@ -20,10 +20,12 @@ export default function MessagesPage() {
   const { accounts, selectedAccountId, setSelectedAccountId } = useAccounts(token);
   const {
     conversations,
+    unreadTotal,
     isLoading: conversationsLoading,
     refresh: refreshConversations,
   } = useConversations(selectedAccountId, token);
 
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [thread, setThread] = useState<ConversationThread | null>(null);
   const [threadLoading, setThreadLoading] = useState(false);
@@ -35,6 +37,13 @@ export default function MessagesPage() {
     setSelectedOrderId(null);
     setThread(null);
   }, [selectedAccountId]);
+
+  // O backend já entrega as conversas ordenadas da mais recente pra mais
+  // antiga (por data da última mensagem) — o filtro só reduz a lista sem
+  // reordenar, então essa ordem sempre se mantém.
+  const visibleConversations = unreadOnly
+    ? conversations.filter((conversation) => conversation.unread_count > 0)
+    : conversations;
 
   async function openConversation(orderId: number) {
     if (!selectedAccountId || !token) return;
@@ -85,12 +94,30 @@ export default function MessagesPage() {
 
       <div className="grid grid-cols-1 overflow-hidden rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark md:h-[600px] md:grid-cols-[300px_1fr]">
         <div className="flex flex-col overflow-y-auto border-b border-stroke dark:border-strokedark md:border-b-0 md:border-r">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stroke px-4 py-2.5 dark:border-strokedark">
+            <label className="flex items-center gap-2 text-sm text-black dark:text-white">
+              <input
+                type="checkbox"
+                checked={unreadOnly}
+                onChange={(e) => setUnreadOnly(e.target.checked)}
+              />
+              Só não lidas
+            </label>
+            {unreadTotal > 0 && (
+              <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-white">
+                {unreadTotal}
+              </span>
+            )}
+          </div>
+
           {conversationsLoading && conversations.length === 0 ? (
             <p className="p-4 text-sm text-body dark:text-bodydark">Carregando conversas...</p>
-          ) : conversations.length === 0 ? (
-            <p className="p-4 text-sm text-body dark:text-bodydark">Nenhuma conversa encontrada.</p>
+          ) : visibleConversations.length === 0 ? (
+            <p className="p-4 text-sm text-body dark:text-bodydark">
+              {unreadOnly ? 'Nenhuma conversa não lida.' : 'Nenhuma conversa encontrada.'}
+            </p>
           ) : (
-            conversations.map((conversation) => (
+            visibleConversations.map((conversation) => (
               <button
                 key={conversation.order_id}
                 onClick={() => openConversation(conversation.order_id)}

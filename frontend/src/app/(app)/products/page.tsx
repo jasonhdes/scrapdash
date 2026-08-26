@@ -12,6 +12,7 @@ import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
 import { Pagination } from '@/components/shared/Pagination';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { getCurrentMonthRange } from '@/utils/dateRange';
+import { DEPOSIT_COLORS, DEPOSIT_LABELS, depositKey } from '@/utils/deposit';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Todos os status' },
@@ -27,19 +28,6 @@ const STATUS_LABELS: Record<string, string> = {
   under_review: 'Em revisão',
   inactive: 'Inativo',
 };
-
-const DEPOSIT_LABELS: Record<string, string> = {
-  full: 'FULL',
-  loja: 'LOJA',
-};
-
-const DEPOSIT_COLORS: Record<string, string> = {
-  full: 'bg-success/10 text-success',
-};
-
-function depositKey(logisticType: string | null) {
-  return logisticType === 'fulfillment' ? 'full' : 'loja';
-}
 
 const inputClass =
   'rounded-lg border border-stroke bg-transparent py-2 pr-4 text-sm text-black outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary';
