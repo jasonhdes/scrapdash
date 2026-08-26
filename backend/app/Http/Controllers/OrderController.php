@@ -69,7 +69,13 @@ class OrderController extends Controller
 
         abort_if($order->account_id !== $account->id, 404);
 
-        return new OrderResource($order->load('payments', 'approvedPayment', 'items'));
+        return new OrderResource($order->load([
+            'payments',
+            'approvedPayment',
+            'items',
+            'returns',
+            'returnHistory' => fn ($q) => $q->orderByDesc('occurred_at')->orderByDesc('id'),
+        ]));
     }
 
     public function markProcessed(Request $request, Account $account, Order $order): OrderResource

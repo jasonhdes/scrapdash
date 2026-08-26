@@ -13,6 +13,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderReturnController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 
@@ -55,7 +56,9 @@ Route::middleware(['auth:api', 'throttle:api'])->group(function () {
 
     Route::get('accounts/{account}/payments', [PaymentController::class, 'index']);
     Route::get('accounts/{account}/financial/summary', [FinancialController::class, 'summary']);
-    Route::get('accounts/{account}/financial/reconciliation', [FinancialController::class, 'reconciliation']);
+    Route::get('accounts/{account}/financial/balance', [FinancialController::class, 'balance']);
+    Route::patch('accounts/{account}/financial/balance-seed', [FinancialController::class, 'updateBalanceSeed']);
+    Route::post('accounts/{account}/financial/validate', [FinancialController::class, 'markValidated']);
 
     Route::get('accounts/{account}/reports/movements', [ReportController::class, 'movements']);
     Route::get('accounts/{account}/reports/monthly', [ReportController::class, 'monthly']);
@@ -66,6 +69,10 @@ Route::middleware(['auth:api', 'throttle:api'])->group(function () {
     Route::post('accounts/{account}/returns', [OrderReturnController::class, 'store']);
     Route::patch('accounts/{account}/returns/{return}', [OrderReturnController::class, 'update']);
     Route::delete('accounts/{account}/returns/{return}', [OrderReturnController::class, 'destroy']);
+
+    Route::get('accounts/{account}/purchases', [PurchaseController::class, 'index']);
+    Route::post('accounts/{account}/purchases', [PurchaseController::class, 'store']);
+    Route::delete('accounts/{account}/purchases/{purchase}', [PurchaseController::class, 'destroy']);
 
     Route::get('accounts/{account}/employees', [EmployeeController::class, 'index']);
     Route::post('accounts/{account}/employees', [EmployeeController::class, 'store']);

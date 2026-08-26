@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\SyncLog;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -25,12 +26,37 @@ class SyncOrdersJob implements ShouldQueue
     /** @var array<int, int> */
     public array $backoff = [60, 300, 900];
 
+    /**
+     * A sincronização de rotina (essa aqui) só deve tocar em pedidos a
+     * partir dessa data — tudo antes disso já foi reconstruído a partir dos
+     * relatórios oficiais/planilhas e é a fonte de verdade; deixar a rotina
+     * voltar mais que isso recria pedidos "recentes" que na verdade já
+     * foram substituídos por dados mais completos, fazendo os números
+     * desandarem de novo. Backfill deliberado de histórico mais antigo
+     * continua possível via ImportOrderHistoryJob (botão "Importar
+     * histórico"), que não usa esse piso.
+     */
+    // A margem de 4h depois da meia-noite é de propósito: a API do ML
+    // compara em UTC e o `date_created` volta com o fuso de Brasília
+    // (-03:00) — meia-noite local vira 03:00 UTC, então sem essa folga
+    // pedidos das ~21h-23h59 do dia anterior acabam do lado "depois do
+    // piso" na comparação (já aconteceu: 245 pedidos de 30/06 vazaram com
+    // o piso cravado em "2026-07-01 00:00").
+    // Público porque OrderReturnController::sync() reusa exatamente o mesmo
+    // piso — ele também não deve reprocessar pedidos cancelados/mediação
+    // anteriores a essa data, pelo mesmo motivo (dados vêm dos relatórios
+    // oficiais/planilhas, não da API, e já passaram por regras de negócio
+    // específicas que a lógica "ao vivo" não reproduz).
+    public const LIVE_SYNC_FLOOR_DATE = '2026-07-01 04:00:00';
+
     public function __construct(private readonly Account $account) {}
 
     public function handle(MercadoLivreService $mercadoLivre): void
     {
         $this->runLogged($this->account, SyncLog::TYPE_ORDERS, function () use ($mercadoLivre) {
-            return $this->applyOrders($mercadoLivre->searchOrders($this->account));
+            $floor = CarbonImmutable::parse(self::LIVE_SYNC_FLOOR_DATE);
+
+            return $this->applyOrders($mercadoLivre->searchOrders($this->account, $floor));
         });
     }
 

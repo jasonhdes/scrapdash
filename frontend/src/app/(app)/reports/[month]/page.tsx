@@ -37,7 +37,7 @@ const ORDER_GROUP_COLORS: Record<string, string> = {
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
   approved: 'Aprovado',
-  refunded: 'Reembolsado',
+  refunded: 'Venda cancelada',
   rejected: 'Rejeitado',
   cancelled: 'Cancelado',
   in_mediation: 'Em mediação',

@@ -9,6 +9,8 @@ import { getOrder, markOrderProcessed } from '@/services/orders';
 import type { Order } from '@/types/order';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { BRASILIA_TIMEZONE, formatReleaseDate } from '@/utils/format';
+import { RETURN_STATUS_BADGE_COLORS, RETURN_STATUS_LABELS } from '@/utils/returnStatus';
+import { PAYMENT_STATUS_LABELS } from '@/utils/paymentStatus';
 
 const buttonClass =
   'rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60';
@@ -219,7 +221,7 @@ export default function OrderDetailPage() {
                         {payment.mercadolivre_payment_id}
                       </td>
                       <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
-                        <StatusBadge status={payment.status} />
+                        <StatusBadge status={payment.status} labels={PAYMENT_STATUS_LABELS} />
                       </td>
                       <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
                         {formatCurrency(payment.transaction_amount, order.currency)}
@@ -238,6 +240,53 @@ export default function OrderDetailPage() {
           ) : (
             <p className="text-sm text-body dark:text-bodydark">
               Nenhum pagamento sincronizado para este pedido.
+            </p>
+          )}
+
+          <h2 className="text-lg font-semibold text-black dark:text-white">
+            Histórico de devolução/cancelamento
+          </h2>
+
+          {order.return_history && order.return_history.length > 0 ? (
+            <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
+              <table className="w-full table-auto">
+                <thead>
+                  <tr className="bg-gray-2 text-center dark:bg-meta-4">
+                    <th className="px-4 py-4 font-medium text-black dark:text-white">Status</th>
+                    <th className="px-4 py-4 font-medium text-black dark:text-white">Valor</th>
+                    <th className="px-4 py-4 font-medium text-black dark:text-white">Data do evento</th>
+                    <th className="px-4 py-4 font-medium text-black dark:text-white">
+                      Registrado em
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {order.return_history.map((entry) => (
+                    <tr key={entry.id}>
+                      <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
+                        <StatusBadge
+                          status={entry.status}
+                          labels={RETURN_STATUS_LABELS}
+                          colors={RETURN_STATUS_BADGE_COLORS}
+                        />
+                      </td>
+                      <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+                        {formatCurrency(entry.value, order.currency)}
+                      </td>
+                      <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                        {formatDate(entry.occurred_at)}
+                      </td>
+                      <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+                        {formatDate(entry.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-body dark:text-bodydark">
+              Nenhum evento de devolução/cancelamento registrado para este pedido.
             </p>
           )}
         </>

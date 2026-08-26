@@ -152,10 +152,20 @@ class ReportController extends Controller
             ->get(['paid_at', 'ml_fee', 'mp_processing_fee', 'shipping_fee'])
             ->groupBy(fn (Payment $payment) => $payment->paid_at->format('Y-m'));
 
+        // Devolução/cancelamento conta no mês da VENDA, não no mês em que o
+        // status foi atualizado — um pedido vendido em junho e cancelado só
+        // em agosto ainda "pesa" no resultado de junho. Só cai de volta pro
+        // occurred_at quando não há pedido vinculado (registro manual).
         $returnsByMonth = OrderReturn::where('account_id', $account->id)
-            ->whereBetween('occurred_at', [$startDate->startOfDay(), $endDate->endOfDay()])
-            ->get(['occurred_at', 'status', 'value'])
-            ->groupBy(fn (OrderReturn $return) => $return->occurred_at->format('Y-m'));
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereHas('order', fn ($oq) => $oq->whereBetween('ordered_at', [$startDate->startOfDay(), $endDate->endOfDay()]))
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->whereNull('order_id')->whereBetween('occurred_at', [$startDate->startOfDay(), $endDate->endOfDay()]);
+                    });
+            })
+            ->with('order:id,ordered_at')
+            ->get(['id', 'order_id', 'occurred_at', 'status', 'value'])
+            ->groupBy(fn (OrderReturn $return) => ($return->order?->ordered_at ?? $return->occurred_at)->format('Y-m'));
 
         $months = [];
 

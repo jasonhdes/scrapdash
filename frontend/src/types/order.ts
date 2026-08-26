@@ -36,6 +36,15 @@ export interface OrderReturnStatusEntry {
   source: "auto" | "manual";
 }
 
+export interface OrderReturnHistoryEntry {
+  id: number;
+  status: string;
+  occurred_at: string;
+  value: number;
+  source: "auto" | "manual";
+  created_at: string;
+}
+
 export interface Order {
   id: number;
   mercadolivre_order_id: string;
@@ -64,4 +73,5 @@ export interface Order {
   items?: OrderItem[];
   payments?: Payment[];
   return_statuses?: OrderReturnStatusEntry[];
+  return_history?: OrderReturnHistoryEntry[];
 }

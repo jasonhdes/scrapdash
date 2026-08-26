@@ -278,6 +278,7 @@ class MercadoLivreService
      *     financing_fee: ?float,
      *     coupon_amount: ?float,
      *     net_received_amount: ?float,
+     *     date_last_updated: ?string,
      * }
      */
     public function getPaymentRelease(Account $account, string $paymentId): array
@@ -299,6 +300,7 @@ class MercadoLivreService
             'coupon_amount' => null,
             'net_received_amount' => null,
             'shipping_charged_on_cancel' => false,
+            'date_last_updated' => null,
         ];
 
         if ($response->status() === 404) {
@@ -349,6 +351,7 @@ class MercadoLivreService
             ...$fees,
             'net_received_amount' => $response->json('transaction_details.net_received_amount'),
             'shipping_charged_on_cancel' => $shippingChargedOnCancel,
+            'date_last_updated' => $response->json('date_last_updated'),
         ];
     }
 

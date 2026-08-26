@@ -72,6 +72,19 @@ class MercadoLivreAuthController extends Controller
             return redirect()->away("{$frontendUrl}?ml_connected=0&reason=resposta_sem_access_token");
         }
 
+        if (empty($token['refresh_token'])) {
+            // Sem isso a conta nunca se renova sozinha (RefreshTokenJob
+            // exige refresh_token) e volta a pedir reconexão manual em
+            // poucas horas — logamos as CHAVES da resposta (nunca os
+            // valores) pra diagnosticar se o Mercado Livre realmente não
+            // está emitindo refresh_token pra este client_id/app, ou se é
+            // um problema de parsing daqui.
+            \Illuminate\Support\Facades\Log::warning('MercadoLivreAuthController: resposta de token sem refresh_token', [
+                'account_id' => $account->id,
+                'response_keys' => array_keys($token),
+            ]);
+        }
+
         $account->update([
             'mercadolivre_user_id' => $token['user_id'] ?? null,
             'mercadolivre_access_token' => $token['access_token'],
