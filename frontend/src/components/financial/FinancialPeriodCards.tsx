@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  getFinancialBalance,
-  saveFinancialValidation,
-  updateBalanceSeed,
+  closePeriod,
+  getFinancialPeriods,
+  refreshSales,
+  updatePeriodField,
 } from '@/services/financial';
 import { createPurchase, deletePurchase, listPurchases } from '@/services/purchases';
-import type { FinancialBalance } from '@/types/financial';
+import type { EditablePeriodField, FinancialPeriodSnapshot, FinancialPeriods } from '@/types/financial';
 import type { Purchase } from '@/types/purchase';
 import { Pagination } from '@/components/shared/Pagination';
 import { BRASILIA_TIMEZONE } from '@/utils/format';
@@ -19,12 +20,28 @@ const buttonClass =
 const primaryButtonClass =
   'rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-60';
 
+const FIELD_LABELS: Record<EditablePeriodField, string> = {
+  previous_balance: 'Saldo anterior',
+  total_sales: 'Total de vendas',
+  held_balance: 'Saldo retido',
+  refunded_balance: 'Saldo reembolsado',
+  discounts: 'Descontos',
+};
+
+const EDITABLE_FIELDS: EditablePeriodField[] = [
+  'previous_balance',
+  'total_sales',
+  'held_balance',
+  'refunded_balance',
+  'discounts',
+];
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 }
 
 function formatDateTime(value: string | null) {
-  if (!value) return 'Nunca validado';
+  if (!value) return null;
   return new Date(value).toLocaleString('pt-BR', {
     timeZone: BRASILIA_TIMEZONE,
     day: '2-digit',
@@ -47,12 +64,7 @@ function PencilIcon({ className }: { className?: string }) {
   );
 }
 
-interface BalanceCellProps {
-  label: string;
-  children: React.ReactNode;
-}
-
-function BalanceCell({ label, children }: BalanceCellProps) {
+function Card({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center rounded-sm border border-stroke bg-white px-5 py-5 text-center shadow-1 dark:border-strokedark dark:bg-boxdark sm:px-7.5">
       <span className="text-sm font-medium text-body dark:text-bodydark">{label}</span>
@@ -61,67 +73,77 @@ function BalanceCell({ label, children }: BalanceCellProps) {
   );
 }
 
-export function FinancialBalanceSection({
+export function FinancialPeriodCards({
   accountId,
   token,
-  refreshKey,
 }: {
   accountId: number | null;
   token: string | null;
-  refreshKey?: number;
 }) {
-  const [balance, setBalance] = useState<FinancialBalance | null>(null);
+  const [periods, setPeriods] = useState<FinancialPeriods | null>(null);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [purchasesMeta, setPurchasesMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [purchasesPage, setPurchasesPage] = useState(1);
   const [showPurchases, setShowPurchases] = useState(false);
 
-  const [isEditingSeed, setIsEditingSeed] = useState(false);
-  const [seedInput, setSeedInput] = useState('');
-  const [isSavingSeed, setIsSavingSeed] = useState(false);
+  const [editingField, setEditingField] = useState<EditablePeriodField | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [isSavingField, setIsSavingField] = useState(false);
+  const [isRefreshingSales, setIsRefreshingSales] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   const [purchaseForm, setPurchaseForm] = useState({ occurred_at: '', description: '', value: '' });
   const [isSavingPurchase, setIsSavingPurchase] = useState(false);
-  const [isSavingValidation, setIsSavingValidation] = useState(false);
 
   const load = useCallback(async () => {
     if (!accountId || !token) return;
-    const [balanceRes, purchasesRes] = await Promise.all([
-      getFinancialBalance(accountId, token),
+    const [periodsRes, purchasesRes] = await Promise.all([
+      getFinancialPeriods(accountId, token),
       listPurchases(accountId, token, { page: purchasesPage, perPage: 5 }),
     ]);
-    setBalance(balanceRes);
+    setPeriods(periodsRes);
     setPurchases(purchasesRes.data);
     setPurchasesMeta(purchasesRes.meta);
   }, [accountId, token, purchasesPage]);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountId, token, purchasesPage, refreshKey]);
+  }, [load]);
 
-  async function handleSaveSeed() {
+  async function handleSaveField(field: EditablePeriodField) {
     if (!accountId || !token) return;
-    const value = Number(seedInput.replace(',', '.'));
+    const value = Number(editValue.replace(',', '.'));
     if (Number.isNaN(value)) return;
-    setIsSavingSeed(true);
+    setIsSavingField(true);
     try {
-      const updated = await updateBalanceSeed(accountId, token, value);
-      setBalance(updated);
-      setIsEditingSeed(false);
+      const updated = await updatePeriodField(accountId, token, field, value);
+      setPeriods(updated);
+      setEditingField(null);
     } finally {
-      setIsSavingSeed(false);
+      setIsSavingField(false);
     }
   }
 
-  async function handleSaveValidation() {
+  async function handleRefreshSales() {
     if (!accountId || !token) return;
-    setIsSavingValidation(true);
+    setIsRefreshingSales(true);
     try {
-      const updated = await saveFinancialValidation(accountId, token);
-      setBalance(updated);
+      const updated = await refreshSales(accountId, token);
+      setPeriods(updated);
     } finally {
-      setIsSavingValidation(false);
+      setIsRefreshingSales(false);
+    }
+  }
+
+  async function handleClosePeriod() {
+    if (!accountId || !token) return;
+    if (!confirm('Fechar o período atual? Os valores de agora viram histórico e um período novo começa.')) return;
+    setIsClosing(true);
+    try {
+      const updated = await closePeriod(accountId, token);
+      setPeriods(updated);
+    } finally {
+      setIsClosing(false);
     }
   }
 
@@ -145,117 +167,121 @@ export function FinancialBalanceSection({
 
   async function handleDeletePurchase(purchaseId: number) {
     if (!accountId || !token) return;
-    if (!confirm('Remover essa compra?')) return;
+    if (!confirm('Remover essa despesa?')) return;
     await deletePurchase(accountId, token, purchaseId);
     await load();
   }
 
-  if (!balance) {
+  if (!periods) {
+    return <p className="text-sm text-body dark:text-bodydark">Carregando período financeiro...</p>;
+  }
+
+  function renderEditableCard(field: EditablePeriodField, snapshot: FinancialPeriodSnapshot) {
+    const isEditing = editingField === field;
+
     return (
-      <p className="text-sm text-body dark:text-bodydark">Carregando saldo...</p>
+      <Card key={field} label={FIELD_LABELS[field]}>
+        {isEditing ? (
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              type="number"
+              step="0.01"
+              autoFocus
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className={`${inputClass} w-28`}
+            />
+            <button
+              type="button"
+              disabled={isSavingField}
+              onClick={() => handleSaveField(field)}
+              className={primaryButtonClass}
+            >
+              Salvar
+            </button>
+            <button type="button" onClick={() => setEditingField(null)} className={buttonClass}>
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="block text-title-md font-bold text-black dark:text-white">
+              {formatCurrency(snapshot[field])}
+            </span>
+            <button
+              type="button"
+              title={`Editar ${FIELD_LABELS[field]}`}
+              onClick={() => {
+                setEditValue(String(snapshot[field]));
+                setEditingField(field);
+              }}
+              className="text-body hover:text-primary dark:text-bodydark"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        {field === 'total_sales' && (
+          <button
+            type="button"
+            disabled={isRefreshingSales}
+            onClick={handleRefreshSales}
+            className="mt-1 text-xs font-medium text-primary hover:underline"
+          >
+            {isRefreshingSales ? 'Atualizando...' : 'Atualizar vendas'}
+          </button>
+        )}
+      </Card>
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <BalanceCell label="Saldo atual disponível">
-          {isEditingSeed ? (
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="number"
-                step="0.01"
-                autoFocus
-                value={seedInput}
-                onChange={(e) => setSeedInput(e.target.value)}
-                className={`${inputClass} w-28`}
-              />
-              <button
-                type="button"
-                disabled={isSavingSeed}
-                onClick={handleSaveSeed}
-                className={primaryButtonClass}
-              >
-                Salvar
-              </button>
-              <button type="button" onClick={() => setIsEditingSeed(false)} className={buttonClass}>
-                Cancelar
-              </button>
-            </div>
-          ) : (
-            <div className="mt-2 flex items-center gap-2">
-              <span className="block text-title-md font-bold text-black dark:text-white">
-                {balance.seed.value === null ? 'Saldo inicial não definido' : formatCurrency(balance.current_balance)}
-              </span>
-              <button
-                type="button"
-                title="Editar saldo inicial"
-                onClick={() => {
-                  setSeedInput(balance.seed.value !== null ? String(balance.seed.value) : '');
-                  setIsEditingSeed(true);
-                }}
-                className="text-body hover:text-primary dark:text-bodydark"
-              >
-                <PencilIcon className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </BalanceCell>
-
-        <BalanceCell label="Saídas por compras">
-          <span className="mt-2 block text-title-md font-bold text-black dark:text-white">
-            {formatCurrency(balance.purchases_total)}
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-black dark:text-white">Período atual</h2>
+          <span className="text-sm text-body dark:text-bodydark">
+            Aberto desde: {formatDateTime(periods.current.created_at)}
           </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {EDITABLE_FIELDS.map((field) => renderEditableCard(field, periods.current))}
+          <Card label="Despesas">
+            <span className="mt-2 block text-title-md font-bold text-black dark:text-white">
+              {formatCurrency(periods.current.despesas)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowPurchases((v) => !v)}
+              className="mt-1 text-xs font-medium text-primary hover:underline"
+            >
+              {showPurchases ? 'Ocultar lançamentos' : 'Ver lançamentos'}
+            </button>
+          </Card>
+        </div>
+
+        <div className="flex justify-end">
           <button
             type="button"
-            onClick={() => setShowPurchases((v) => !v)}
-            className="mt-1 text-xs font-medium text-primary hover:underline"
+            disabled={isClosing}
+            onClick={handleClosePeriod}
+            className={primaryButtonClass}
           >
-            {showPurchases ? 'Ocultar lançamentos' : 'Ver lançamentos'}
+            {isClosing ? 'Fechando...' : 'Fechar período'}
           </button>
-        </BalanceCell>
-
-        <BalanceCell label="Saídas por cancelamento">
-          <span className="mt-2 block text-title-md font-bold text-black dark:text-white">
-            {formatCurrency(balance.cancellations_total)}
-          </span>
-        </BalanceCell>
-
-        <BalanceCell label="Saída por desconto em frete">
-          <span className="mt-2 block text-title-md font-bold text-black dark:text-white">
-            {formatCurrency(balance.freight_discounts_total)}
-          </span>
-        </BalanceCell>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-stroke bg-white px-5 py-3 shadow-1 dark:border-strokedark dark:bg-boxdark">
-        <div className="flex items-center gap-3 text-sm text-body dark:text-bodydark">
-          <span>Última validação: {formatDateTime(balance.last_validated_at)}</span>
-          {balance.pending_review_count > 0 && (
-            <span className="rounded-full bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">
-              {balance.pending_review_count} pendente(s) de conferência
-            </span>
-          )}
         </div>
-        <button
-          type="button"
-          disabled={isSavingValidation}
-          onClick={handleSaveValidation}
-          className={primaryButtonClass}
-        >
-          {isSavingValidation ? 'Salvando...' : 'Salvar validação'}
-        </button>
       </div>
 
       {showPurchases && (
         <div className="flex flex-col gap-3 rounded-sm border border-stroke bg-white p-4 shadow-1 dark:border-strokedark dark:bg-boxdark">
           <form onSubmit={handleCreatePurchase} className="flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="purchase-date" className="text-sm font-medium text-black dark:text-white">
+              <label htmlFor="expense-date" className="text-sm font-medium text-black dark:text-white">
                 Data
               </label>
               <input
-                id="purchase-date"
+                id="expense-date"
                 type="date"
                 required
                 value={purchaseForm.occurred_at}
@@ -264,11 +290,11 @@ export function FinancialBalanceSection({
               />
             </div>
             <div className="flex flex-1 min-w-[200px] flex-col gap-1.5">
-              <label htmlFor="purchase-description" className="text-sm font-medium text-black dark:text-white">
+              <label htmlFor="expense-description" className="text-sm font-medium text-black dark:text-white">
                 Descrição
               </label>
               <input
-                id="purchase-description"
+                id="expense-description"
                 type="text"
                 required
                 placeholder="Ex: compra de estoque"
@@ -278,11 +304,11 @@ export function FinancialBalanceSection({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="purchase-value" className="text-sm font-medium text-black dark:text-white">
+              <label htmlFor="expense-value" className="text-sm font-medium text-black dark:text-white">
                 Valor
               </label>
               <input
-                id="purchase-value"
+                id="expense-value"
                 type="number"
                 step="0.01"
                 min="0.01"
@@ -298,7 +324,7 @@ export function FinancialBalanceSection({
           </form>
 
           {purchases.length === 0 ? (
-            <p className="text-sm text-body dark:text-bodydark">Nenhuma compra lançada.</p>
+            <p className="text-sm text-body dark:text-bodydark">Nenhuma despesa lançada.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full table-auto">
@@ -348,6 +374,34 @@ export function FinancialBalanceSection({
           )}
         </div>
       )}
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-black dark:text-white">Último fechamento</h2>
+          <span className="text-sm text-body dark:text-bodydark">
+            {periods.previous
+              ? `Fechado em: ${formatDateTime(periods.previous.closed_at)}`
+              : 'Nenhum fechamento anterior'}
+          </span>
+        </div>
+
+        {periods.previous && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {EDITABLE_FIELDS.map((field) => (
+              <Card key={field} label={FIELD_LABELS[field]}>
+                <span className="mt-2 block text-title-md font-bold text-black dark:text-white">
+                  {formatCurrency(periods.previous![field])}
+                </span>
+              </Card>
+            ))}
+            <Card label="Despesas">
+              <span className="mt-2 block text-title-md font-bold text-black dark:text-white">
+                {formatCurrency(periods.previous.despesas)}
+              </span>
+            </Card>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

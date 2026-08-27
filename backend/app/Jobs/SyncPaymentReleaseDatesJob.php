@@ -47,9 +47,20 @@ class SyncPaymentReleaseDatesJob implements ShouldQueue
             //    `ml_fee` continuaria nulo pra sempre; e pagamentos que
             //    nunca vão ter uma liberação de verdade (ex.: cancelados)
             //    também nunca teriam `money_release_date` preenchido.
-            // 2. "Vencidos mas ainda não liberados" (comum nesta conta, nem
-            //    sempre vira released=true na data prevista) — só recheca
-            //    liberação, as taxas desses já foram capturadas antes.
+            // 2. "Vencidos mas ainda não liberados" OU simplesmente não
+            //    checados há mais de 1 dia — a `money_release_date` que o
+            //    Mercado Pago retorna é só uma ESTIMATIVA conservadora
+            //    (geralmente o teto de 30 dias da proteção ao comprador), a
+            //    liberação real costuma acontecer bem antes (ex.: assim que
+            //    a entrega é confirmada). Rechecar só quando a data
+            //    estimada vence deixa passar batido toda liberação
+            //    antecipada — o pagamento nunca fica "vencido" segundo a
+            //    nossa própria estimativa errada, então nunca era
+            //    rechecado (achado real: 14 pagamentos já liberados há
+            //    dias no Mercado Pago, mas com estimativa nossa apontando
+            //    pra semanas à frente, continuavam contando como "a
+            //    receber"). `updated_at` como sinal alternativo garante que
+            //    todo pendente é rechecado pelo menos 1x por dia.
             // Pedidos importados dos relatórios oficiais/planilhas usam um
             // "mercadolivre_payment_id" sintético (prefixos diferentes
             // conforme a importação: "ml-report-", "planilha-"...) que não
@@ -83,8 +94,11 @@ class SyncPaymentReleaseDatesJob implements ShouldQueue
             $overdueRecheck = $remainingSlots > 0
                 ? $baseQuery()
                     ->where('released', false)
-                    ->where('money_release_date', '<=', now())
-                    ->orderBy('money_release_date')
+                    ->where(function ($q) {
+                        $q->where('money_release_date', '<=', now())
+                            ->orWhere('updated_at', '<=', now()->subDay());
+                    })
+                    ->orderBy('updated_at')
                     ->limit($remainingSlots)
                     ->get()
                 : collect();

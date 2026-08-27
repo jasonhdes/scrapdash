@@ -4,14 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
 import { triggerMercadoLivreSync } from '@/services/accounts';
-import { listPayments, getFinancialSummary } from '@/services/financial';
-import type { FinancialSummary, PaymentWithOrder } from '@/types/financial';
+import { listPayments, setPaymentReleased } from '@/services/financial';
+import type { PaymentSortColumn } from '@/services/financial';
+import type { PaymentWithOrder } from '@/types/financial';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
 import { DateRangeFilter } from '@/components/dashboard/DateRangeFilter';
-import { KpiCard } from '@/components/dashboard/KpiCard';
-import { Pagination } from '@/components/shared/Pagination';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { FinancialBalanceSection } from '@/components/financial/FinancialBalanceSection';
+import { FinancialPeriodCards } from '@/components/financial/FinancialPeriodCards';
 import { OrderDetailModal } from '@/components/financial/OrderDetailModal';
 import { BRASILIA_TIMEZONE, formatReleaseDate } from '@/utils/format';
 import { getCurrentMonthRange } from '@/utils/dateRange';
@@ -51,36 +50,78 @@ export default function FinancialPage() {
   const [startDate, setStartDate] = useState(() => getCurrentMonthRange().startDate);
   const [endDate, setEndDate] = useState(() => getCurrentMonthRange().endDate);
   const [status, setStatus] = useState('');
-  const [page, setPage] = useState(1);
+  const [orderNumberInput, setOrderNumberInput] = useState('');
+  const [orderNumber, setOrderNumber] = useState('');
+  const [sortBy, setSortBy] = useState<PaymentSortColumn | undefined>(undefined);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
-  const [summary, setSummary] = useState<FinancialSummary | null>(null);
   const [payments, setPayments] = useState<PaymentWithOrder[]>([]);
-  const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [modalOrderId, setModalOrderId] = useState<number | null>(null);
-  const [balanceRefreshKey, setBalanceRefreshKey] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!selectedAccountId || !token) return;
     triggerMercadoLivreSync(selectedAccountId, token);
     setIsLoading(true);
     try {
-      const [summaryRes, paymentsRes] = await Promise.all([
-        getFinancialSummary(selectedAccountId, token, startDate || undefined, endDate || undefined),
-        listPayments(selectedAccountId, token, {
-          status: status || undefined,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
-          page,
-        }),
-      ]);
-      setSummary(summaryRes);
+      const paymentsRes = await listPayments(selectedAccountId, token, {
+        status: status || undefined,
+        orderNumber: orderNumber || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        sortBy,
+        sortDir,
+        perPage: 5000,
+      });
       setPayments(paymentsRes.data);
-      setMeta(paymentsRes.meta);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedAccountId, token, startDate, endDate, status, page]);
+  }, [selectedAccountId, token, startDate, endDate, status, orderNumber, sortBy, sortDir]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setOrderNumber(orderNumberInput), 400);
+    return () => clearTimeout(timeout);
+  }, [orderNumberInput]);
+
+  async function handleToggleReleased(paymentId: number, current: boolean | null) {
+    if (!selectedAccountId || !token) return;
+    const next = !current;
+    // Otimista: a linha muda na hora, sem esperar o round-trip.
+    setPayments((prev) =>
+      prev.map((p) => (p.id === paymentId ? { ...p, released: next } : p)),
+    );
+    await setPaymentReleased(selectedAccountId, token, paymentId, next);
+  }
+
+  function handleSort(column: PaymentSortColumn) {
+    if (sortBy === column) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(column);
+      setSortDir('asc');
+    }
+  }
+
+  function sortIndicator(column: PaymentSortColumn) {
+    if (sortBy !== column) return '';
+    return sortDir === 'asc' ? ' ▲' : ' ▼';
+  }
+
+  function SortableHeader({ column, label }: { column: PaymentSortColumn; label: string }) {
+    return (
+      <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
+        <button
+          type="button"
+          onClick={() => handleSort(column)}
+          className="mx-auto flex items-center gap-1 font-medium hover:text-primary"
+        >
+          {label}
+          {sortIndicator(column)}
+        </button>
+      </th>
+    );
+  }
 
   useEffect(() => {
     loadData();
@@ -108,60 +149,33 @@ export default function FinancialPage() {
         onChange={({ startDate: s, endDate: e }) => {
           setStartDate(s);
           setEndDate(e);
-          setPage(1);
         }}
         onClear={() => {
           setStartDate(getCurrentMonthRange().startDate);
           setEndDate(getCurrentMonthRange().endDate);
-          setPage(1);
         }}
       />
 
-      <FinancialBalanceSection
-        accountId={selectedAccountId}
-        token={token}
-        refreshKey={balanceRefreshKey}
-      />
-
-      {isLoading && !summary ? (
-        <p className="text-sm text-body dark:text-bodydark">Carregando dados financeiros...</p>
-      ) : summary ? (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              label="Total líquido"
-              value={formatCurrency(summary.total_net)}
-              className="sm:col-span-2"
-            />
-            <KpiCard label="Total bruto" value={formatCurrency(summary.total_gross)} />
-            <KpiCard
-              label="Total recebido"
-              value={formatCurrency(summary.total_received.amount)}
-              hint={`${summary.total_received.total} pagamento(s)`}
-            />
-            <KpiCard
-              label="A receber"
-              value={formatCurrency(summary.pending_receivable.amount)}
-              hint={`${summary.pending_receivable.total} pagamento(s)`}
-            />
-            <KpiCard
-              label="Vendas canceladas"
-              value={formatCurrency(summary.cancelled_sales.amount)}
-              hint={`${summary.cancelled_sales.total} pagamento(s)`}
-            />
-            <KpiCard
-              label="Valor retido"
-              value={formatCurrency(summary.held_value.amount)}
-              hint={`${summary.held_value.total} pagamento(s)`}
-            />
-          </div>
-        </>
-      ) : null}
+      <FinancialPeriodCards accountId={selectedAccountId} token={token} />
 
       <div className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-black dark:text-white">Lista de pedidos</h2>
 
         <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="order-number" className="text-sm font-medium text-black dark:text-white">
+              Número do pedido
+            </label>
+            <input
+              id="order-number"
+              type="text"
+              placeholder="Buscar pedido..."
+              value={orderNumberInput}
+              onChange={(e) => setOrderNumberInput(e.target.value)}
+              style={inputStyle}
+              className={inputClass}
+            />
+          </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="status" className="text-sm font-medium text-black dark:text-white">
               Status
@@ -169,10 +183,7 @@ export default function FinancialPage() {
             <select
               id="status"
               value={status}
-              onChange={(e) => {
-                setStatus(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => setStatus(e.target.value)}
               style={inputStyle}
               className={inputClass}
             >
@@ -185,18 +196,23 @@ export default function FinancialPage() {
           </div>
         </div>
 
-        {payments.length === 0 ? (
+        {isLoading && payments.length === 0 ? (
+          <p className="text-sm text-body dark:text-bodydark">Carregando pedidos...</p>
+        ) : payments.length === 0 ? (
           <p className="text-sm text-body dark:text-bodydark">Nenhum pagamento encontrado.</p>
         ) : (
-          <div className="overflow-x-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
+          <div className="scrollbar-visible max-h-[70vh] overflow-auto rounded-sm border border-stroke bg-white shadow-1 dark:border-strokedark dark:bg-boxdark">
             <table className="w-full table-auto">
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr className="bg-gray-2 text-center dark:bg-meta-4">
-                  <th className="px-4 py-4 font-medium text-black dark:text-white">Pedido</th>
-                  <th className="px-4 py-4 font-medium text-black dark:text-white">Status</th>
-                  <th className="px-4 py-4 font-medium text-black dark:text-white">Valor líquido</th>
-                  <th className="px-4 py-4 font-medium text-black dark:text-white">Data</th>
-                  <th className="px-4 py-4 font-medium text-black dark:text-white">Liberação</th>
+                  <SortableHeader column="mercadolivre_order_id" label="Pedido" />
+                  <SortableHeader column="status" label="Status" />
+                  <SortableHeader column="net_received_amount" label="Valor líquido" />
+                  <SortableHeader column="paid_at" label="Data" />
+                  <SortableHeader column="money_release_date" label="Liberação" />
+                  <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
+                    Liberado
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -227,19 +243,19 @@ export default function FinancialPage() {
                     <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
                       {formatReleaseDate(payment.money_release_date, payment.released)}
                     </td>
+                    <td className="border-b border-stroke px-4 py-3 text-center dark:border-strokedark">
+                      <input
+                        type="checkbox"
+                        checked={!!payment.released}
+                        onChange={() => handleToggleReleased(payment.id, payment.released)}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-
-        <Pagination
-          currentPage={meta.current_page}
-          lastPage={meta.last_page}
-          total={meta.total}
-          onChange={setPage}
-        />
       </div>
 
       {modalOrderId && selectedAccountId && token && (
@@ -247,10 +263,7 @@ export default function FinancialPage() {
           accountId={selectedAccountId}
           token={token}
           orderId={modalOrderId}
-          onClose={() => {
-            setModalOrderId(null);
-            setBalanceRefreshKey((k) => k + 1);
-          }}
+          onClose={() => setModalOrderId(null)}
         />
       )}
     </div>

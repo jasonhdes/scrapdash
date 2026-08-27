@@ -10,23 +10,26 @@ export interface PaymentWithOrder {
   order?: { id: number; mercadolivre_order_id: string };
 }
 
-export interface FinancialSummary {
-  period: { start_date: string | null; end_date: string | null };
-  total_gross: number;
-  total_net: number;
-  total_received: { total: number; amount: number };
-  pending_receivable: { total: number; amount: number };
-  cancelled_sales: { total: number; amount: number };
-  held_value: { total: number; amount: number };
+export interface FinancialPeriodSnapshot {
+  previous_balance: number;
+  total_sales: number;
+  held_balance: number;
+  refunded_balance: number;
+  discounts: number;
+  despesas: number;
+  ending_balance: number;
+  created_at: string;
+  closed_at: string | null;
 }
 
-export interface FinancialBalance {
-  seed: { value: number | null; updated_at: string | null };
-  sales_net_total: number;
-  purchases_total: number;
-  cancellations_total: number;
-  freight_discounts_total: number;
-  current_balance: number;
-  pending_review_count: number;
-  last_validated_at: string | null;
+export interface FinancialPeriods {
+  current: FinancialPeriodSnapshot;
+  previous: FinancialPeriodSnapshot | null;
 }
+
+export type EditablePeriodField =
+  | "previous_balance"
+  | "total_sales"
+  | "held_balance"
+  | "refunded_balance"
+  | "discounts";
