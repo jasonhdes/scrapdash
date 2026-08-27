@@ -55,10 +55,11 @@ Route::middleware(['auth:api', 'throttle:api'])->group(function () {
     Route::post('accounts/{account}/orders/{order}/messages', [MessageController::class, 'reply']);
 
     Route::get('accounts/{account}/payments', [PaymentController::class, 'index']);
-    Route::get('accounts/{account}/financial/summary', [FinancialController::class, 'summary']);
-    Route::get('accounts/{account}/financial/balance', [FinancialController::class, 'balance']);
-    Route::patch('accounts/{account}/financial/balance-seed', [FinancialController::class, 'updateBalanceSeed']);
-    Route::post('accounts/{account}/financial/validate', [FinancialController::class, 'markValidated']);
+    Route::patch('accounts/{account}/payments/{payment}', [PaymentController::class, 'update']);
+    Route::get('accounts/{account}/financial/periods', [FinancialController::class, 'periods']);
+    Route::patch('accounts/{account}/financial/periods/current', [FinancialController::class, 'updatePeriodField']);
+    Route::post('accounts/{account}/financial/periods/current/refresh-sales', [FinancialController::class, 'refreshSales']);
+    Route::post('accounts/{account}/financial/periods/close', [FinancialController::class, 'closePeriod']);
 
     Route::get('accounts/{account}/reports/movements', [ReportController::class, 'movements']);
     Route::get('accounts/{account}/reports/monthly', [ReportController::class, 'monthly']);
