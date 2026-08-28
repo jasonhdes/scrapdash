@@ -45,10 +45,19 @@ export interface OrderReturnHistoryEntry {
   created_at: string;
 }
 
+export interface PackSibling {
+  id: number;
+  mercadolivre_order_id: string;
+  total_amount: number;
+}
+
 export interface Order {
   id: number;
   mercadolivre_order_id: string;
   pack_id: string | null;
+  pack_total_amount?: number | null;
+  pack_order_numbers?: string[] | null;
+  pack_siblings?: PackSibling[];
   status: string | null;
   shipping_status: string | null;
   logistic_type: string | null;

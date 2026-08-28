@@ -5,5 +5,6 @@ export interface Account {
   name: string;
   marketplace: string;
   mercadolivre_connected: boolean;
+  mercadolivre_token_expired: boolean;
   permissions: ModulePermissions;
 }

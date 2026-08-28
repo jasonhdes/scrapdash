@@ -28,6 +28,14 @@ class FinancialController extends Controller
         'discounts',
     ];
 
+    /**
+     * @var array<int, string>
+     */
+    private const MERCADOPAGO_FIELDS = [
+        'pending_balance',
+        'available_balance',
+    ];
+
     public function periods(Account $account): JsonResponse
     {
         Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'financial']);
@@ -41,7 +49,33 @@ class FinancialController extends Controller
         return response()->json([
             'current' => $this->present($current),
             'previous' => $previous ? $this->present($previous) : null,
+            'mercadopago' => [
+                'pending_balance' => $account->mercadopago_pending_balance !== null ? (float) $account->mercadopago_pending_balance : null,
+                'available_balance' => $account->mercadopago_available_balance !== null ? (float) $account->mercadopago_available_balance : null,
+            ],
         ]);
+    }
+
+    /**
+     * Os dois valores digitados manualmente conferindo o Mercado Pago —
+     * "a receber" e "disponível" — usados só pra calcular a diferença
+     * contra o "Saldo atual" calculado aqui, não pra nenhum outro cálculo.
+     */
+    public function updateMercadoPagoField(Request $request, Account $account): JsonResponse
+    {
+        $actor = Auth::guard('api')->user();
+        Gate::forUser($actor)->authorize('manageModule', [$account, 'financial']);
+
+        $validated = $request->validate([
+            'field' => ['required', 'string', 'in:'.implode(',', self::MERCADOPAGO_FIELDS)],
+            'value' => ['required', 'numeric'],
+        ]);
+
+        $account->update(['mercadopago_'.$validated['field'] => $validated['value']]);
+
+        AuditLogger::log($actor, 'account.mercadopago_balance_updated', $account, $account, $validated);
+
+        return $this->periods($account);
     }
 
     public function updatePeriodField(Request $request, Account $account): JsonResponse
@@ -82,6 +116,34 @@ class FinancialController extends Controller
         $period->update(['total_sales' => $totalSales]);
 
         AuditLogger::log($actor, 'financial_period.sales_refreshed', $account, $period, ['total_sales' => (float) $totalSales]);
+
+        return $this->periods($account);
+    }
+
+    /**
+     * Recalcula "saldo retido", "saldo reembolsado" e "descontos" a partir
+     * das atualizações de devolução (valor_retido/estorno_valor/
+     * desconto_venda+desconto_frete) registradas nos pedidos desde a
+     * abertura do período — sobrescreve o que estiver guardado, mesmo
+     * editado manualmente antes. Os 3 campos continuam editáveis à mão
+     * depois: isso só puxa o valor somado pra dentro deles.
+     */
+    public function refreshReturns(Account $account): JsonResponse
+    {
+        $actor = Auth::guard('api')->user();
+        Gate::forUser($actor)->authorize('manageModule', [$account, 'financial']);
+
+        $period = $this->currentPeriod($account);
+
+        $values = [
+            'held_balance' => $period->computedHeldBalance(),
+            'refunded_balance' => $period->computedRefundedBalance(),
+            'discounts' => $period->computedDiscounts(),
+        ];
+
+        $period->update($values);
+
+        AuditLogger::log($actor, 'financial_period.returns_refreshed', $account, $period, $values);
 
         return $this->periods($account);
     }
@@ -132,7 +194,7 @@ class FinancialController extends Controller
     {
         return [
             'previous_balance' => (float) $period->previous_balance,
-            'total_sales' => (float) $period->total_sales,
+            'total_sales' => $period->totalSalesForDisplay(),
             'held_balance' => (float) $period->held_balance,
             'refunded_balance' => (float) $period->refunded_balance,
             'discounts' => (float) $period->discounts,

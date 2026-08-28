@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
 import { triggerMercadoLivreSync } from '@/services/accounts';
-import { listPayments, setPaymentReleased } from '@/services/financial';
+import { listPayments } from '@/services/financial';
 import type { PaymentSortColumn } from '@/services/financial';
 import type { PaymentWithOrder } from '@/types/financial';
 import { AccountSelector } from '@/components/dashboard/AccountSelector';
@@ -58,6 +58,49 @@ export default function FinancialPage() {
   const [payments, setPayments] = useState<PaymentWithOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalOrderId, setModalOrderId] = useState<number | null>(null);
+  const [expandedPacks, setExpandedPacks] = useState<Set<string>>(new Set());
+
+  function togglePack(packId: string) {
+    setExpandedPacks((prev) => {
+      const next = new Set(prev);
+      if (next.has(packId)) {
+        next.delete(packId);
+      } else {
+        next.add(packId);
+      }
+      return next;
+    });
+  }
+
+  // Mesmo princípio da página de Pedidos: pagamentos cujo pedido
+  // compartilha o mesmo `pack_id` (compra combinada) colapsam numa linha
+  // de resumo somando o valor líquido, expansível pros pagamentos
+  // individuais.
+  const displayRows = useMemo(() => {
+    const seenPacks = new Set<string>();
+    const rows: (
+      | { kind: 'single'; payment: PaymentWithOrder }
+      | { kind: 'pack'; packId: string; payments: PaymentWithOrder[]; total: number }
+    )[] = [];
+
+    for (const payment of payments) {
+      const packId = payment.order?.pack_id;
+      if (!packId) {
+        rows.push({ kind: 'single', payment });
+        continue;
+      }
+      if (seenPacks.has(packId)) continue;
+      seenPacks.add(packId);
+
+      const packPayments = payments.filter((p) => p.order?.pack_id === packId);
+      const total =
+        payment.order?.pack_total_amount ??
+        packPayments.reduce((sum, p) => sum + (p.net_received_amount ?? 0), 0);
+      rows.push({ kind: 'pack', packId, payments: packPayments, total });
+    }
+
+    return rows;
+  }, [payments]);
 
   const loadData = useCallback(async () => {
     if (!selectedAccountId || !token) return;
@@ -83,16 +126,6 @@ export default function FinancialPage() {
     const timeout = setTimeout(() => setOrderNumber(orderNumberInput), 400);
     return () => clearTimeout(timeout);
   }, [orderNumberInput]);
-
-  async function handleToggleReleased(paymentId: number, current: boolean | null) {
-    if (!selectedAccountId || !token) return;
-    const next = !current;
-    // Otimista: a linha muda na hora, sem esperar o round-trip.
-    setPayments((prev) =>
-      prev.map((p) => (p.id === paymentId ? { ...p, released: next } : p)),
-    );
-    await setPaymentReleased(selectedAccountId, token, paymentId, next);
-  }
 
   function handleSort(column: PaymentSortColumn) {
     if (sortBy === column) {
@@ -127,6 +160,53 @@ export default function FinancialPage() {
     loadData();
   }, [loadData]);
 
+  function renderPaymentRow(payment: PaymentWithOrder, isPackMember = false) {
+    return (
+      <tr key={payment.id}>
+        <td
+          className={`border-b border-stroke px-4 py-3 dark:border-strokedark ${isPackMember ? 'pl-8' : ''}`}
+        >
+          {payment.order ? (
+            <button
+              type="button"
+              onClick={() => setModalOrderId(payment.order!.id)}
+              className="font-medium text-primary hover:underline"
+            >
+              {payment.order.mercadolivre_order_id}
+            </button>
+          ) : (
+            '—'
+          )}
+        </td>
+        <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
+          <StatusBadge status={payment.status} labels={PAYMENT_STATUS_LABELS} />
+        </td>
+        <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
+          {formatMoneyOrDash(payment.net_received_amount)}
+        </td>
+        <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+          {formatDate(payment.paid_at)}
+        </td>
+        <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
+          {formatReleaseDate(payment.money_release_date, payment.released)}
+        </td>
+        <td className="border-b border-stroke px-4 py-3 text-center dark:border-strokedark">
+          {payment.order ? (
+            <button
+              type="button"
+              onClick={() => setModalOrderId(payment.order!.id)}
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              Editar
+            </button>
+          ) : (
+            '—'
+          )}
+        </td>
+      </tr>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -156,7 +236,7 @@ export default function FinancialPage() {
         }}
       />
 
-      <FinancialPeriodCards accountId={selectedAccountId} token={token} />
+      <FinancialPeriodCards accountId={selectedAccountId} token={token} onRefreshAll={loadData} />
 
       <div className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-black dark:text-white">Lista de pedidos</h2>
@@ -211,47 +291,45 @@ export default function FinancialPage() {
                   <SortableHeader column="paid_at" label="Data" />
                   <SortableHeader column="money_release_date" label="Liberação" />
                   <th className="whitespace-nowrap px-4 py-4 font-medium text-black dark:text-white">
-                    Liberado
+                    Ações
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.id}>
-                    <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
-                      {payment.order ? (
-                        <button
-                          type="button"
-                          onClick={() => setModalOrderId(payment.order!.id)}
-                          className="font-medium text-primary hover:underline"
+                {displayRows.map((row) => {
+                  if (row.kind === 'single') {
+                    return renderPaymentRow(row.payment);
+                  }
+
+                  const isExpanded = expandedPacks.has(row.packId);
+                  return (
+                    <Fragment key={`pack-frag-${row.packId}`}>
+                      <tr
+                        onClick={() => togglePack(row.packId)}
+                        className="cursor-pointer bg-gray-2/70 hover:bg-gray dark:bg-meta-4/60 dark:hover:bg-meta-4"
+                      >
+                        <td
+                          colSpan={6}
+                          className="border-b border-stroke px-4 py-3 dark:border-strokedark"
                         >
-                          {payment.order.mercadolivre_order_id}
-                        </button>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="border-b border-stroke px-4 py-3 dark:border-strokedark">
-                      <StatusBadge status={payment.status} labels={PAYMENT_STATUS_LABELS} />
-                    </td>
-                    <td className="border-b border-stroke px-4 py-3 text-black dark:border-strokedark dark:text-white">
-                      {formatMoneyOrDash(payment.net_received_amount)}
-                    </td>
-                    <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
-                      {formatDate(payment.paid_at)}
-                    </td>
-                    <td className="border-b border-stroke px-4 py-3 text-body dark:border-strokedark dark:text-bodydark">
-                      {formatReleaseDate(payment.money_release_date, payment.released)}
-                    </td>
-                    <td className="border-b border-stroke px-4 py-3 text-center dark:border-strokedark">
-                      <input
-                        type="checkbox"
-                        checked={!!payment.released}
-                        onChange={() => handleToggleReleased(payment.id, payment.released)}
-                      />
-                    </td>
-                  </tr>
-                ))}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-body dark:text-bodydark">
+                              {isExpanded ? '▼' : '▶'}
+                            </span>
+                            <span className="font-medium text-black dark:text-white">
+                              Pacote {row.packId}
+                            </span>
+                            <span className="text-body dark:text-bodydark">
+                              · {row.payments.length} pagamentos · Valor líquido total:{' '}
+                              {formatCurrency(row.total)}
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                      {isExpanded && row.payments.map((payment) => renderPaymentRow(payment, true))}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

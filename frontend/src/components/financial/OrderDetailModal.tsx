@@ -15,7 +15,8 @@ const STATUS_OPTIONS: { value: OrderReturnStatus; label: string }[] = [
   { value: 'pecas_devolvidas', label: 'Peças devolvidas' },
   { value: 'comprou_cancelou', label: 'Comprou e cancelou' },
   { value: 'valor_retido', label: 'Valor retido' },
-  { value: 'estorno_valor', label: 'Estorno de valor' },
+  { value: 'estorno_valor', label: 'Cliente reembolsado' },
+  { value: 'reembolso', label: 'Reembolso' },
   { value: 'desconto_venda', label: 'Desconto de venda' },
   { value: 'desconto_frete', label: 'Desconto de frete' },
 ];
@@ -172,6 +173,36 @@ export function OrderDetailModal({
                 <span className="text-black dark:text-white">{formatDateTime(order.money_release_date)}</span>
               </div>
             </div>
+
+            {order.pack_id && (
+              <div className="rounded-sm border border-stroke bg-gray-2 p-3 text-sm dark:border-strokedark dark:bg-meta-4">
+                <p className="text-black dark:text-white">
+                  Pacote: {order.pack_id}
+                  {order.pack_total_amount != null && (
+                    <>
+                      {' '}
+                      · Valor total do pacote:{' '}
+                      {formatCurrency(order.pack_total_amount, order.currency)}
+                    </>
+                  )}
+                </p>
+                {order.pack_siblings && order.pack_siblings.length > 0 && (
+                  <ul className="mt-2 flex flex-col gap-1">
+                    {order.pack_siblings.map((sibling) => (
+                      <li key={sibling.id}>
+                        <Link
+                          href={`/orders/${sibling.id}`}
+                          className="text-sm font-medium text-primary hover:underline"
+                        >
+                          Pedido {sibling.mercadolivre_order_id} —{' '}
+                          {formatCurrency(sibling.total_amount, order.currency)}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             {order.items && order.items.length > 0 && (
               <div>

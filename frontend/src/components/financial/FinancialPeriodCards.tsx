@@ -1,10 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { triggerMercadoLivreSync } from '@/services/accounts';
 import {
   closePeriod,
   getFinancialPeriods,
+  refreshReturns,
   refreshSales,
+  updateMercadoPagoField,
   updatePeriodField,
 } from '@/services/financial';
 import { createPurchase, deletePurchase, listPurchases } from '@/services/purchases';
@@ -28,8 +31,19 @@ const FIELD_LABELS: Record<EditablePeriodField, string> = {
   discounts: 'Descontos',
 };
 
-const EDITABLE_FIELDS: EditablePeriodField[] = [
+// Todos os 5 campos guardados no período — usado pra exibir a linha
+// "Último fechamento" (as 5 cartas somam com "saldo anterior" incluso).
+const PERIOD_FIELDS: EditablePeriodField[] = [
   'previous_balance',
+  'total_sales',
+  'held_balance',
+  'refunded_balance',
+  'discounts',
+];
+
+// Na linha "Período atual", "saldo anterior" não é mais um campo solto
+// editável — vira o cartão calculado "Saldo atual" (ending_balance).
+const CURRENT_ROW_EDITABLE_FIELDS: EditablePeriodField[] = [
   'total_sales',
   'held_balance',
   'refunded_balance',
@@ -76,9 +90,11 @@ function Card({ label, children }: { label: string; children: React.ReactNode })
 export function FinancialPeriodCards({
   accountId,
   token,
+  onRefreshAll,
 }: {
   accountId: number | null;
   token: string | null;
+  onRefreshAll?: () => void | Promise<void>;
 }) {
   const [periods, setPeriods] = useState<FinancialPeriods | null>(null);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -90,10 +106,15 @@ export function FinancialPeriodCards({
   const [editValue, setEditValue] = useState('');
   const [isSavingField, setIsSavingField] = useState(false);
   const [isRefreshingSales, setIsRefreshingSales] = useState(false);
+  const [isRefreshingReturns, setIsRefreshingReturns] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
   const [purchaseForm, setPurchaseForm] = useState({ occurred_at: '', description: '', value: '' });
   const [isSavingPurchase, setIsSavingPurchase] = useState(false);
+
+  const [mercadoPagoForm, setMercadoPagoForm] = useState({ pending_balance: '', available_balance: '' });
+  const [isSavingMercadoPago, setIsSavingMercadoPago] = useState(false);
+  const mercadoPagoInitialized = useRef(false);
 
   const load = useCallback(async () => {
     if (!accountId || !token) return;
@@ -109,6 +130,35 @@ export function FinancialPeriodCards({
   useEffect(() => {
     load();
   }, [load]);
+
+  // Só preenche os campos a partir do que já foi salvo na PRIMEIRA vez que
+  // os dados chegam — depois disso o formulário é todo controlado pelo que
+  // o usuário está digitando, sem levar susto de outra ação (ex: editar um
+  // campo do período) resetar o que ainda não foi salvo aqui.
+  useEffect(() => {
+    if (periods && !mercadoPagoInitialized.current) {
+      setMercadoPagoForm({
+        pending_balance: periods.mercadopago.pending_balance !== null ? String(periods.mercadopago.pending_balance) : '',
+        available_balance: periods.mercadopago.available_balance !== null ? String(periods.mercadopago.available_balance) : '',
+      });
+      mercadoPagoInitialized.current = true;
+    }
+  }, [periods]);
+
+  async function handleSaveMercadoPago() {
+    if (!accountId || !token) return;
+    const pending = Number(mercadoPagoForm.pending_balance.replace(',', '.'));
+    const available = Number(mercadoPagoForm.available_balance.replace(',', '.'));
+    if (Number.isNaN(pending) || Number.isNaN(available)) return;
+    setIsSavingMercadoPago(true);
+    try {
+      await updateMercadoPagoField(accountId, token, 'pending_balance', pending);
+      const updated = await updateMercadoPagoField(accountId, token, 'available_balance', available);
+      setPeriods(updated);
+    } finally {
+      setIsSavingMercadoPago(false);
+    }
+  }
 
   async function handleSaveField(field: EditablePeriodField) {
     if (!accountId || !token) return;
@@ -128,10 +178,30 @@ export function FinancialPeriodCards({
     if (!accountId || !token) return;
     setIsRefreshingSales(true);
     try {
+      await triggerMercadoLivreSync(accountId, token);
+      // Sincronização é assíncrona (vai pra fila) — dá um respiro curto
+      // pro worker processar antes de recalcular, senão o clique quase
+      // sempre recarrega os mesmos números de antes.
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       const updated = await refreshSales(accountId, token);
       setPeriods(updated);
+      // "Atualizar vendas" precisa atualizar a Lista de pedidos também
+      // (vive no componente pai) — senão os pedidos mais recentes não
+      // aparecem nem lá nem no total recalculado.
+      await onRefreshAll?.();
     } finally {
       setIsRefreshingSales(false);
+    }
+  }
+
+  async function handleRefreshReturns() {
+    if (!accountId || !token) return;
+    setIsRefreshingReturns(true);
+    try {
+      const updated = await refreshReturns(accountId, token);
+      setPeriods(updated);
+    } finally {
+      setIsRefreshingReturns(false);
     }
   }
 
@@ -231,6 +301,17 @@ export function FinancialPeriodCards({
             {isRefreshingSales ? 'Atualizando...' : 'Atualizar vendas'}
           </button>
         )}
+        {(field === 'held_balance' || field === 'refunded_balance' || field === 'discounts') && (
+          <button
+            type="button"
+            disabled={isRefreshingReturns}
+            onClick={handleRefreshReturns}
+            title="Recalcula os 3 campos (retido/reembolsado/descontos) a partir das atualizações registradas nos pedidos"
+            className="mt-1 text-xs font-medium text-primary hover:underline"
+          >
+            {isRefreshingReturns ? 'Atualizando...' : 'Atualizar'}
+          </button>
+        )}
       </Card>
     );
   }
@@ -246,7 +327,12 @@ export function FinancialPeriodCards({
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {EDITABLE_FIELDS.map((field) => renderEditableCard(field, periods.current))}
+          <Card label="Saldo atual">
+            <span className="mt-2 block text-title-md font-bold text-black dark:text-white">
+              {formatCurrency(periods.current.ending_balance)}
+            </span>
+          </Card>
+          {CURRENT_ROW_EDITABLE_FIELDS.map((field) => renderEditableCard(field, periods.current))}
           <Card label="Despesas">
             <span className="mt-2 block text-title-md font-bold text-black dark:text-white">
               {formatCurrency(periods.current.despesas)}
@@ -259,6 +345,69 @@ export function FinancialPeriodCards({
               {showPurchases ? 'Ocultar lançamentos' : 'Ver lançamentos'}
             </button>
           </Card>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-4 rounded-sm border border-stroke bg-white p-4 shadow-1 dark:border-strokedark dark:bg-boxdark">
+          <span className="text-sm font-semibold text-black dark:text-white">Mercado Pago</span>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="mp-pending" className="text-sm font-medium text-black dark:text-white">
+              Saldo a receber
+            </label>
+            <input
+              id="mp-pending"
+              type="number"
+              step="0.01"
+              value={mercadoPagoForm.pending_balance}
+              onChange={(e) => setMercadoPagoForm((f) => ({ ...f, pending_balance: e.target.value }))}
+              className={`${inputClass} w-32`}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="mp-available" className="text-sm font-medium text-black dark:text-white">
+              Saldo disponível
+            </label>
+            <input
+              id="mp-available"
+              type="number"
+              step="0.01"
+              value={mercadoPagoForm.available_balance}
+              onChange={(e) => setMercadoPagoForm((f) => ({ ...f, available_balance: e.target.value }))}
+              className={`${inputClass} w-32`}
+            />
+          </div>
+
+          <button
+            type="button"
+            disabled={isSavingMercadoPago}
+            onClick={handleSaveMercadoPago}
+            className={primaryButtonClass}
+          >
+            {isSavingMercadoPago ? 'Salvando...' : 'Salvar'}
+          </button>
+
+          {(() => {
+            const pending = Number(mercadoPagoForm.pending_balance.replace(',', '.')) || 0;
+            const available = Number(mercadoPagoForm.available_balance.replace(',', '.')) || 0;
+            const soma = pending + available;
+            const diferenca = soma - periods.current.ending_balance;
+            const diffColor =
+              diferenca < 0 ? 'text-danger' : diferenca > 0 ? 'text-success' : 'text-meta-5';
+
+            return (
+              <>
+                <div className="flex flex-col gap-1.5 text-center">
+                  <span className="text-sm font-medium text-black dark:text-white">Soma</span>
+                  <span className="text-lg font-bold text-black dark:text-white">{formatCurrency(soma)}</span>
+                </div>
+                <div className="flex flex-col gap-1.5 text-center">
+                  <span className="text-sm font-medium text-black dark:text-white">Diferença</span>
+                  <span className={`text-lg font-bold ${diffColor}`}>{formatCurrency(diferenca)}</span>
+                </div>
+              </>
+            );
+          })()}
         </div>
 
         <div className="flex justify-end">
@@ -387,7 +536,7 @@ export function FinancialPeriodCards({
 
         {periods.previous && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            {EDITABLE_FIELDS.map((field) => (
+            {PERIOD_FIELDS.map((field) => (
               <Card key={field} label={FIELD_LABELS[field]}>
                 <span className="mt-2 block text-title-md font-bold text-black dark:text-white">
                   {formatCurrency(periods.previous![field])}
