@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useTheme } from '@/hooks/useTheme';
-import { triggerMercadoLivreSync } from '@/services/accounts';
+import { connectMercadoLivre, triggerMercadoLivreSync } from '@/services/accounts';
 
 function HamburgerIcon({ className }: { className?: string }) {
   return (
@@ -74,16 +74,50 @@ function SyncIcon({ className }: { className?: string }) {
 export function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const router = useRouter();
   const { user, token, logout } = useAuth();
-  const { selectedAccountId } = useAccounts(token);
+  const { selectedAccountId, selectedAccount } = useAccounts(token);
   const { theme, toggleTheme } = useTheme();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done' | 'skipped'>('idle');
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const autoReconnectAttempted = useRef(false);
 
   async function handleLogout() {
     setUserMenuOpen(false);
     await logout();
     router.push('/login');
   }
+
+  async function handleReconnect() {
+    if (!selectedAccountId || !token) return;
+    setIsReconnecting(true);
+    try {
+      const { redirect_url } = await connectMercadoLivre(selectedAccountId, token);
+      window.location.href = redirect_url;
+    } catch {
+      // Provavelmente um user_partner sem permissão de reconectar (só o
+      // dono da conta ou master pode) — não trava a tela por isso.
+      setIsReconnecting(false);
+    }
+  }
+
+  // O token do Mercado Livre não tem refresh_token pra se renovar sozinho
+  // (achado desta sessão), então precisa de reconexão manual — mas em vez
+  // de esperar o usuário notar e clicar, dispara o próprio fluxo assim que
+  // detecta o token vencido. Só tenta 1x por carregamento da página (evita
+  // loop de redirecionamento se algo der errado) — o botão continua
+  // disponível pra tentar de novo manualmente a qualquer momento.
+  useEffect(() => {
+    if (
+      selectedAccount?.mercadolivre_token_expired &&
+      !autoReconnectAttempted.current &&
+      selectedAccountId &&
+      token
+    ) {
+      autoReconnectAttempted.current = true;
+      handleReconnect();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccount?.mercadolivre_token_expired, selectedAccountId, token]);
 
   async function handleSync() {
     if (!selectedAccountId || !token || syncState === 'syncing') return;
@@ -112,6 +146,17 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         <div className="hidden lg:block" />
 
         <div className="flex items-center gap-3 2xsm:gap-7">
+          {selectedAccount?.mercadolivre_token_expired && (
+            <button
+              onClick={handleReconnect}
+              disabled={isReconnecting}
+              title="O token do Mercado Livre expirou — clique para reconectar"
+              className="flex items-center gap-1.5 rounded-full border-[0.5px] border-warning bg-warning/10 px-3 py-1.5 text-xs font-medium text-warning disabled:opacity-60"
+            >
+              {isReconnecting ? 'Reconectando...' : 'Reconectar Mercado Livre'}
+            </button>
+          )}
+
           <button
             onClick={toggleTheme}
             aria-label="Alternar tema claro/escuro"

@@ -15,6 +15,8 @@ class OrderReturn extends Model
 
     public const STATUS_ESTORNO_VALOR = 'estorno_valor';
 
+    public const STATUS_REEMBOLSO = 'reembolso';
+
     public const STATUS_DESCONTO_VENDA = 'desconto_venda';
 
     public const STATUS_DESCONTO_FRETE = 'desconto_frete';
@@ -29,6 +31,7 @@ class OrderReturn extends Model
         self::STATUS_COMPROU_CANCELOU,
         self::STATUS_VALOR_RETIDO,
         self::STATUS_ESTORNO_VALOR,
+        self::STATUS_REEMBOLSO,
         self::STATUS_DESCONTO_VENDA,
         self::STATUS_DESCONTO_FRETE,
         self::STATUS_VENDA_BALCAO,

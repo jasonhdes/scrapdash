@@ -20,6 +20,8 @@ class Account extends Model
         'mercadolivre_access_token',
         'mercadolivre_refresh_token',
         'mercadolivre_token_expires_at',
+        'mercadopago_pending_balance',
+        'mercadopago_available_balance',
     ];
 
     protected $hidden = [
@@ -33,6 +35,8 @@ class Account extends Model
             'mercadolivre_access_token' => 'encrypted',
             'mercadolivre_refresh_token' => 'encrypted',
             'mercadolivre_token_expires_at' => 'datetime',
+            'mercadopago_pending_balance' => 'decimal:2',
+            'mercadopago_available_balance' => 'decimal:2',
         ];
     }
 

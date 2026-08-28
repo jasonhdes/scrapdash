@@ -41,7 +41,33 @@ class OrderController extends Controller
             ->with('approvedPayment', 'mediationPayment', 'items', 'returns')
             ->paginate($request->integer('per_page', 20));
 
+        $this->attachPackAggregates($orders->getCollection());
+
         return OrderResource::collection($orders);
+    }
+
+    /**
+     * Soma o valor de todo pedido que compartilha o mesmo `pack_id` dentro
+     * da própria coleção já carregada (sem query extra — funciona porque
+     * as telas que precisam disso já carregam o período inteiro de uma
+     * vez, não paginação pequena). Pendura os totais como atributos
+     * "extras" no model, sem precisar de coluna nova nem relação formal.
+     *
+     * @param  \Illuminate\Support\Collection<int, Order>  $orders
+     */
+    private function attachPackAggregates($orders): void
+    {
+        $orders->whereNotNull('pack_id')
+            ->groupBy('pack_id')
+            ->each(function ($group) {
+                $total = $group->sum('total_amount');
+                $numbers = $group->pluck('mercadolivre_order_id')->values()->all();
+
+                $group->each(function (Order $order) use ($total, $numbers) {
+                    $order->setAttribute('pack_total_amount', (float) $total);
+                    $order->setAttribute('pack_order_numbers', $numbers);
+                });
+            });
     }
 
     /**
@@ -69,13 +95,22 @@ class OrderController extends Controller
 
         abort_if($order->account_id !== $account->id, 404);
 
-        return new OrderResource($order->load([
+        $order->load([
             'payments',
             'approvedPayment',
             'items',
             'returns',
             'returnHistory' => fn ($q) => $q->orderByDesc('occurred_at')->orderByDesc('id'),
-        ]));
+        ]);
+
+        if ($order->pack_id) {
+            $order->setAttribute('pack_siblings', Order::where('account_id', $account->id)
+                ->where('pack_id', $order->pack_id)
+                ->where('id', '!=', $order->id)
+                ->get(['id', 'mercadolivre_order_id', 'total_amount']));
+        }
+
+        return new OrderResource($order);
     }
 
     public function markProcessed(Request $request, Account $account, Order $order): OrderResource
@@ -139,9 +174,12 @@ class OrderController extends Controller
     private function filteredQuery(Request $request, Account $account): Builder
     {
         return Order::where('account_id', $account->id)
-            ->when($request->string('order_number')->isNotEmpty(), fn ($q) => $q->where(
-                'mercadolivre_order_id', 'like', '%'.$request->string('order_number').'%',
-            ))
+            ->when($request->string('order_number')->isNotEmpty(), fn ($q) => $q->where(fn ($oq) => $oq
+                // Também busca por `pack_id`: numa compra combinada, o
+                // Mercado Livre mostra pro vendedor o número do PACOTE, não
+                // os números dos pedidos individuais que compõem ele.
+                ->where('mercadolivre_order_id', 'like', '%'.$request->string('order_number').'%')
+                ->orWhere('pack_id', 'like', '%'.$request->string('order_number').'%')))
             ->when($request->string('buyer')->isNotEmpty(), fn ($q) => $q->where(
                 'buyer_nickname', 'like', '%'.$request->string('buyer').'%',
             ))

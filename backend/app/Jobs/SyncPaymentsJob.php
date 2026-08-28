@@ -55,6 +55,7 @@ class SyncPaymentsJob implements ShouldQueue
                 foreach ($orderData['payments'] ?? [] as $paymentData) {
                     $existing = Payment::where('mercadolivre_payment_id', (string) $paymentData['id'])->first();
                     $newStatus = $paymentData['status'] ?? null;
+                    $isNewPayment = ! $existing;
 
                     $attributes = [
                         'order_id' => $order->id,
@@ -64,6 +65,27 @@ class SyncPaymentsJob implements ShouldQueue
                         'paid_at' => isset($paymentData['date_approved']) ? Carbon::parse($paymentData['date_approved']) : null,
                         'synced_at' => now(),
                     ];
+
+                    // Venda nova (aprovada, nunca vista antes) já busca o
+                    // valor líquido/data de liberação NESTA mesma passada —
+                    // sem isso, ficava esperando o próximo ciclo do job de
+                    // liberação (throttled, prioriza o backlog mais antigo
+                    // primeiro), e uma venda recém-sincronizada podia ficar
+                    // horas sem esses dados. O volume por sync é pequeno
+                    // (só vendas genuinamente novas), diferente de tentar
+                    // isso pra toda a base.
+                    if ($isNewPayment && $newStatus === 'approved') {
+                        $release = $mercadoLivre->getPaymentRelease($this->account, (string) $paymentData['id']);
+                        $attributes['net_received_amount'] = $release['net_received_amount'];
+                        $attributes['money_release_date'] = $release['money_release_date'];
+                        $attributes['released'] = $release['released'] === 'yes';
+                        $attributes['ml_fee'] = $release['ml_fee'];
+                        $attributes['mp_processing_fee'] = $release['mp_processing_fee'];
+                        $attributes['shipping_fee'] = $release['shipping_fee'];
+                        $attributes['financing_fee'] = $release['financing_fee'];
+                        $attributes['coupon_amount'] = $release['coupon_amount'];
+                        $attributes['shipping_charged_on_cancel'] = $release['shipping_charged_on_cancel'];
+                    }
 
                     // Não temos o timestamp exato de quando o ML mudou o
                     // status, só quando NÓS observamos a mudança — por isso
@@ -80,7 +102,7 @@ class SyncPaymentsJob implements ShouldQueue
                         // data real na API em vez de cravar `now()`, senão
                         // um lote inteiro de pedidos acaba com a mesma
                         // "data de devolução" — o próprio momento do sync.
-                        $isFreshFinalized = ! $existing && in_array($newStatus, [
+                        $isFreshFinalized = $isNewPayment && in_array($newStatus, [
                             'cancelled', 'refunded', 'rejected', 'partially_refunded',
                         ], true);
 

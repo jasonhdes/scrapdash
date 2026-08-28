@@ -141,10 +141,36 @@ export default function OrderDetailPage() {
                 </tr>
                 {order.pack_id && (
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium text-black dark:text-white">
-                      Pack
+                    <th className="px-4 py-3 text-left align-top font-medium text-black dark:text-white">
+                      Pacote
                     </th>
-                    <td className="px-4 py-3 text-black dark:text-white">{order.pack_id}</td>
+                    <td className="px-4 py-3 text-black dark:text-white">
+                      <p>
+                        {order.pack_id}
+                        {order.pack_total_amount != null && (
+                          <>
+                            {' '}
+                            · Valor total do pacote:{' '}
+                            {formatCurrency(order.pack_total_amount, order.currency)}
+                          </>
+                        )}
+                      </p>
+                      {order.pack_siblings && order.pack_siblings.length > 0 && (
+                        <ul className="mt-2 flex flex-col gap-1">
+                          {order.pack_siblings.map((sibling) => (
+                            <li key={sibling.id}>
+                              <Link
+                                href={`/orders/${sibling.id}`}
+                                className="text-sm font-medium text-primary"
+                              >
+                                Pedido {sibling.mercadolivre_order_id} —{' '}
+                                {formatCurrency(sibling.total_amount, order.currency)}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </td>
                   </tr>
                 )}
               </tbody>

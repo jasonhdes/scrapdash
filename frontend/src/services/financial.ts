@@ -1,6 +1,6 @@
 import { apiFetch } from "@/services/api";
 import type { PaginatedResponse } from "@/types/pagination";
-import type { EditablePeriodField, FinancialPeriods, PaymentWithOrder } from "@/types/financial";
+import type { EditablePeriodField, FinancialPeriods, MercadoPagoField, PaymentWithOrder } from "@/types/financial";
 
 export type PaymentSortColumn =
   | "paid_at"
@@ -39,14 +39,6 @@ export function listPayments(accountId: number, token: string, filters: PaymentF
   );
 }
 
-export function setPaymentReleased(accountId: number, token: string, paymentId: number, released: boolean) {
-  return apiFetch<{ data: PaymentWithOrder }>(`/accounts/${accountId}/payments/${paymentId}`, {
-    method: "PATCH",
-    token,
-    body: JSON.stringify({ released }),
-  });
-}
-
 export function getFinancialPeriods(accountId: number, token: string) {
   return apiFetch<FinancialPeriods>(`/accounts/${accountId}/financial/periods`, { token });
 }
@@ -71,9 +63,29 @@ export function refreshSales(accountId: number, token: string) {
   });
 }
 
+export function refreshReturns(accountId: number, token: string) {
+  return apiFetch<FinancialPeriods>(`/accounts/${accountId}/financial/periods/current/refresh-returns`, {
+    method: "POST",
+    token,
+  });
+}
+
 export function closePeriod(accountId: number, token: string) {
   return apiFetch<FinancialPeriods>(`/accounts/${accountId}/financial/periods/close`, {
     method: "POST",
     token,
+  });
+}
+
+export function updateMercadoPagoField(
+  accountId: number,
+  token: string,
+  field: MercadoPagoField,
+  value: number,
+) {
+  return apiFetch<FinancialPeriods>(`/accounts/${accountId}/financial/mercadopago`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify({ field, value }),
   });
 }

@@ -22,7 +22,8 @@ const TYPE_OPTIONS: { value: MovementType | ''; label: string }[] = [
   { value: 'pecas_devolvidas', label: 'Peças devolvidas' },
   { value: 'comprou_cancelou', label: 'Comprou e cancelou' },
   { value: 'valor_retido', label: 'Valor retido' },
-  { value: 'estorno_valor', label: 'Estorno de valor' },
+  { value: 'estorno_valor', label: 'Cliente reembolsado' },
+  { value: 'reembolso', label: 'Reembolso' },
   { value: 'desconto_venda', label: 'Desconto de venda' },
   { value: 'desconto_frete', label: 'Desconto de frete' },
 ];

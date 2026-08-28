@@ -3,6 +3,7 @@ export type OrderReturnStatus =
   | 'comprou_cancelou'
   | 'valor_retido'
   | 'estorno_valor'
+  | 'reembolso'
   | 'desconto_venda'
   | 'desconto_frete'
   | 'venda_balcao';

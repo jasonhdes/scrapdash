@@ -115,6 +115,37 @@ class Order extends Model
     }
 
     /**
+     * Quanto o valor líquido exibido deste pedido precisa ser ajustado por
+     * causa das atualizações de devolução/reembolso registradas NA MÃO
+     * nele — mesmo sinal usado no cálculo do "Saldo atual" do período:
+     * "Valor retido" e descontos SAEM (subtraem), "Cliente reembolsado"
+     * (estorno_valor) VOLTA (soma, reduzindo o quanto se subtrai).
+     * "Reembolso" (novo status) não entra aqui — combinado com o usuário
+     * que fica só como registro, sem afetar nenhum saldo calculado.
+     *
+     * Só considera registros `source = 'manual'`: os automáticos
+     * (gerados por OrderReturnController::sync()) sempre DERIVAM o valor
+     * do `net_received_amount` do pagamento já sincronizado — são um
+     * retrato descritivo de um fato que o valor líquido JÁ reflete, não um
+     * delta independente. Somar eles aqui de novo contaria o mesmo valor
+     * duas vezes pra todo pedido cancelado/em mediação já sincronizado.
+     */
+    public function returnsAdjustment(): float
+    {
+        $returns = ($this->relationLoaded('returns') ? $this->returns : $this->returns()->get())
+            ->where('source', 'manual');
+
+        $held = (float) $returns->where('status', OrderReturn::STATUS_VALOR_RETIDO)->sum('value');
+        $refunded = (float) $returns->where('status', OrderReturn::STATUS_ESTORNO_VALOR)->sum('value');
+        $discounts = (float) $returns->whereIn('status', [
+            OrderReturn::STATUS_DESCONTO_VENDA,
+            OrderReturn::STATUS_DESCONTO_FRETE,
+        ])->sum('value');
+
+        return $held - $refunded + $discounts;
+    }
+
+    /**
      * @return HasMany<OrderReturnHistory, $this>
      */
     public function returnHistory(): HasMany

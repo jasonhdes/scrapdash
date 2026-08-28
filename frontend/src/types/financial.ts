@@ -7,7 +7,13 @@ export interface PaymentWithOrder {
   money_release_date: string | null;
   released: boolean | null;
   synced_at: string | null;
-  order?: { id: number; mercadolivre_order_id: string };
+  order?: {
+    id: number;
+    mercadolivre_order_id: string;
+    pack_id: string | null;
+    pack_total_amount: number | null;
+    pack_order_numbers: string[] | null;
+  };
 }
 
 export interface FinancialPeriodSnapshot {
@@ -22,9 +28,15 @@ export interface FinancialPeriodSnapshot {
   closed_at: string | null;
 }
 
+export interface MercadoPagoBalance {
+  pending_balance: number | null;
+  available_balance: number | null;
+}
+
 export interface FinancialPeriods {
   current: FinancialPeriodSnapshot;
   previous: FinancialPeriodSnapshot | null;
+  mercadopago: MercadoPagoBalance;
 }
 
 export type EditablePeriodField =
@@ -33,3 +45,5 @@ export type EditablePeriodField =
   | "held_balance"
   | "refunded_balance"
   | "discounts";
+
+export type MercadoPagoField = "pending_balance" | "available_balance";

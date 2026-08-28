@@ -28,6 +28,12 @@ class AccountResource extends JsonResource
             'name' => $this->name,
             'marketplace' => $this->marketplace,
             'mercadolivre_connected' => $this->isConnectedToMercadoLivre(),
+            // Distinto de "não conectado": já teve um access_token, mas ele
+            // venceu. O frontend usa isso pra oferecer/disparar a
+            // reconexão — "não conectado" pede o fluxo inicial, "expirado"
+            // só precisa renovar.
+            'mercadolivre_token_expired' => $this->isConnectedToMercadoLivre()
+                && $this->mercadolivre_token_expires_at?->isPast(),
             // Permissões do usuário autenticado NESSA conta — não é sobre a
             // conta em si, é "o que EU posso fazer aqui". O frontend usa
             // isso pra esconder links/telas de módulo que o usuário (tipicamente

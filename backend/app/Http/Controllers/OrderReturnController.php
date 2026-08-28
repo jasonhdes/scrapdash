@@ -107,6 +107,28 @@ class OrderReturnController extends Controller
 
         $validated = $this->validated($request, $account);
 
+        // Só existe UMA linha "atual" por pedido+status (constraint única
+        // account_id+order_id+status — o mesmo esquema que o sync
+        // automático já respeita via upsertAuto()). Se o pedido já tem um
+        // registro (manual ou automático, ex: mediação resolvida já
+        // gravou "estorno_valor") pra esse status, "+ Nova atualização"
+        // atualiza esse registro em vez de tentar inserir um duplicado —
+        // que antes estourava a constraint e virava erro 500 pro usuário.
+        $existing = isset($validated['order_id'])
+            ? OrderReturn::where('account_id', $account->id)
+                ->where('order_id', $validated['order_id'])
+                ->where('status', $validated['status'])
+                ->first()
+            : null;
+
+        if ($existing) {
+            $existing->update([...$validated, 'source' => 'manual']);
+            AuditLogger::log($actor, 'return.updated', $account, $existing);
+            $this->logHistory($account, $existing->order_id, $existing->status, $validated, 'manual');
+
+            return new OrderReturnResource($existing->load('order'));
+        }
+
         $return = OrderReturn::create([
             'verified' => false,
             ...$validated,
@@ -115,6 +137,7 @@ class OrderReturnController extends Controller
         ]);
 
         AuditLogger::log($actor, 'return.created', $account, $return);
+        $this->logHistory($account, $return->order_id, $return->status, $validated, 'manual');
 
         return new OrderReturnResource($return->load('order'));
     }
@@ -460,7 +483,7 @@ class OrderReturnController extends Controller
      *
      * @param  array<string, mixed>  $attributes
      */
-    private function logHistory(Account $account, ?int $orderId, string $status, array $attributes): void
+    private function logHistory(Account $account, ?int $orderId, string $status, array $attributes, string $source = 'auto'): void
     {
         OrderReturnHistory::create([
             'account_id' => $account->id,
@@ -470,7 +493,7 @@ class OrderReturnController extends Controller
             'buyer_name' => $attributes['buyer_name'] ?? null,
             'value' => $attributes['value'] ?? 0,
             'product_name' => $attributes['product_name'] ?? null,
-            'source' => 'auto',
+            'source' => $source,
         ]);
     }
 

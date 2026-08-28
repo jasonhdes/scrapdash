@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Application\Services\AuditLogger;
 use App\Http\Resources\PaymentResource;
 use App\Models\Account;
 use App\Models\Payment;
@@ -33,46 +32,51 @@ class PaymentController extends Controller
         Gate::forUser(Auth::guard('api')->user())->authorize('viewModule', [$account, 'financial']);
 
         $query = Payment::whereHas('order', fn ($q) => $q->where('account_id', $account->id))
-            ->with('order:id,mercadolivre_order_id')
+            ->with(['order:id,mercadolivre_order_id,pack_id', 'order.returns'])
             ->when($request->string('status')->isNotEmpty(), fn ($q) => $q->where('status', $request->string('status')))
             ->when($request->string('payment_method')->isNotEmpty(), fn ($q) => $q->where('payment_method', $request->string('payment_method')))
             ->when($request->date('start_date'), fn ($q, $date) => $q->where('paid_at', '>=', $date->startOfDay()))
             ->when($request->date('end_date'), fn ($q, $date) => $q->where('paid_at', '<=', $date->endOfDay()))
             ->when($request->string('order_number')->isNotEmpty(), fn ($q) => $q->whereHas(
                 'order',
-                fn ($oq) => $oq->where('mercadolivre_order_id', 'like', '%'.$request->string('order_number').'%'),
+                // Também busca por `pack_id`: numa compra combinada, o
+                // Mercado Livre mostra pro vendedor o número do PACOTE, não
+                // os números dos pedidos individuais que compõem ele — sem
+                // isso, buscar pelo número que aparece na tela deles não
+                // encontra nada aqui.
+                fn ($oq) => $oq->where('mercadolivre_order_id', 'like', '%'.$request->string('order_number').'%')
+                    ->orWhere('pack_id', 'like', '%'.$request->string('order_number').'%'),
             ));
 
         $payments = $this->applySort($query, $request)->paginate($request->integer('per_page', 20));
+
+        $this->attachPackAggregates($payments->getCollection());
 
         return PaymentResource::collection($payments);
     }
 
     /**
-     * Confirmação manual de liberação — checkbox "Liberado" na lista do
-     * Financeiro. O status de liberação normalmente vem da sincronização
-     * automática, mas a estimativa do Mercado Pago pode atrasar; isso dá
-     * ao usuário controle direto pra corrigir o que já sabe que caiu na
-     * conta (ou reverter uma marcação errada), e "A receber"/"Recebido"
-     * passam a refletir esse valor imediatamente — não têm mais nenhuma
-     * outra fonte além deste campo.
+     * Mesmo princípio de `OrderController::attachPackAggregates()`: soma
+     * (aqui, o valor LÍQUIDO — essa tela trabalha em cima disso, não do
+     * valor bruto do pedido) entre os pagamentos cujo pedido compartilha o
+     * mesmo `pack_id`, dentro da própria página já carregada — sem query
+     * extra.
+     *
+     * @param  \Illuminate\Support\Collection<int, Payment>  $payments
      */
-    public function update(Request $request, Account $account, Payment $payment): PaymentResource
+    private function attachPackAggregates($payments): void
     {
-        $actor = Auth::guard('api')->user();
-        Gate::forUser($actor)->authorize('manageModule', [$account, 'financial']);
+        $payments->filter(fn (Payment $payment) => $payment->order?->pack_id)
+            ->groupBy(fn (Payment $payment) => $payment->order->pack_id)
+            ->each(function ($group) {
+                $total = $group->sum('net_received_amount');
+                $numbers = $group->pluck('order.mercadolivre_order_id')->values()->all();
 
-        abort_if($payment->order?->account_id !== $account->id, 404);
-
-        $validated = $request->validate([
-            'released' => ['required', 'boolean'],
-        ]);
-
-        $payment->update($validated);
-
-        AuditLogger::log($actor, 'payment.released_updated', $account, $payment, $validated);
-
-        return new PaymentResource($payment->load('order:id,mercadolivre_order_id'));
+                $group->each(function (Payment $payment) use ($total, $numbers) {
+                    $payment->order->setAttribute('pack_total_amount', (float) $total);
+                    $payment->order->setAttribute('pack_order_numbers', $numbers);
+                });
+            });
     }
 
     /**
